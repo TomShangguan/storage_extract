@@ -1,79 +1,47 @@
-# Storage Extract Project Status
+# Storage Extract Project Progress Log
 
-## Implemented Components
+## 2025/5/18 Progress
 
-### Common Package
-- [x] Address and Hash types
-- [x] Hex utilities (FromHex, Hex2Bytes)
-- [x] Basic type constants (HashLength, AddressLength)
+### Newly Implemented Components
+- **Common Package**
+  - Address and Hash types
+  - Hex utilities
+  - Basic constants
+- **Crypto Package**
+  - KeccakState interface
+  - Basic hashing structure
+- **Types Package**
+  - StateAccount structure
+  - EmptyRootHash constant
+- **State Package**
+  - Basic StateDB and StateObject structures
 
-### Crypto Package
-- [x] KeccakState interface
-- [x] NewKeccakState implementation
-- [x] Basic Keccak256Hash function structure
+### TODOs
+1. Fix `Keccak256Hash` implementation 
+2. Implement database reading in `getStateObject`
+3. Add journal system functionality
+4. Implement `GetCommittedState` database reading
+5. Fix `SetState` parameter passing
 
-### Types Package
-- [x] StateAccount structure
-- [x] EmptyRootHash constant
-- [x] NewEmptyStateAccount function
+---
 
-### State Package
-- [x] StateObject and StateDB structures
-- [x] Basic storage operations (getState, setState)
-- [x] Object management (createObject, getStateObject)
+## 2025/5/19 Progress
 
-## TODOs and Errors
+### Newly Implemented Components
+- **State Package**
+  - Journal system structure
+  - Storage change tracking
+  - CachingDB interface definition
+  - Storage mutation tracking system
+  - State update structure
+  - Basic database interface
+  - Concurrent storage updates in `IntermediateRoot`
 
-### Crypto Package
-```go
-// In crypto/crypto.go
-func Keccak256Hash(data ...[]byte) (h common.Hash)
-// ERROR: Function returns empty hash, needs proper implementation
-```
+### TODOs
 
-### StateDB Package
-```go
-// In state/statedb.go
-func (s *StateDB) SetState(addr common.Address, key, value common.Hash) common.Hash {
-    // ERROR: SetState() is called without parameters
-}
-```
-
-### State Object
-```go
-// In state/state_object.go
-func (s *StateObject) GetCommittedState(key common.Hash) common.Hash {
-    // TODO: Implement database reading functionality
-}
-```
-
-### Journal System
-```go
-// In state/statedb.go
-// TODO: Implement journal system for:
-// 1. s.journal.createObject(addr)
-// 2. s.db.journal.setState(s, key, prev, value)
-```
-
-### Database Layer
-```go
-// In state/statedb.go
-// TODO: Implement database reading in getStateObject:
-// - Read from database if object not found in stateObjects map
-// - Add to prefetch list
-// - Insert into stateObjects map
-```
-
-## Next Steps Priority
-
-1. Fix `Keccak256Hash` implementation in crypto package
-2. Correct `SetState` parameter passing in StateDB
-3. Implement basic database interface for GetCommittedState
-4. Add journal system for state tracking
-5. Complete database integration in getStateObject
-
-## Notes
-- Current implementation focuses on in-memory state management
-- Database operations are placeholder implementations
-- Journal system for state reverting is not implemented
-- Some core Ethereum features are simplified for this implementation
+1. Implement reading the storage trie from the database in `getTrie`.
+2. Add prefetch logic and committed state retrieval from the database in `finalise`.
+3. Complete the database interface and implement the mock key-value store for `CachingDB`.
+4. Implement the `OpenStorageTrie` and related trie operations.
+5. Fix `Keccak256Hash` to return the correct hash value.
+6. Address all remaining placeholder and unimplemented functions in the state management code.

@@ -2,11 +2,39 @@ package state
 
 import (
 	"storage_extract/common"
+	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
+type mutationType int
+
+type mutation struct {
+	typ     mutationType
+	applied bool
+}
+
+const (
+	update mutationType = iota
+	deletion
+)
+
+func (m *mutation) isDelete() bool {
+	return m.typ == deletion
+}
+
 type StateDB struct {
+	db           Database
 	stateObjects map[common.Address]*StateObject
 	journal      *journal
+
+	// This map tracks the account mutations that occurred during the
+	// transition. Uncommitted mutations belonging to the same account
+	// can be merged into a single one which is equivalent from database's
+	// perspective. This map is populated at the transaction boundaries.
+	mutations map[common.Address]*mutation
+
+	StorageUpdates time.Duration // Time taken for storage updates
 }
 
 // SetState sets the state of the given address and key to the given value.
@@ -68,7 +96,7 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 		}
 		// TODO: delete logic
 		obj.finalise()
-		// TODO: s.markUpdate(addr) may not needed
+		s.markUpdate(addr)
 	}
 	// TODO: Clear the journal
 }
@@ -79,7 +107,44 @@ func (s *StateDB) Finalise(deleteEmptyObjects bool) {
 // Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 774
 func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.Finalise(deleteEmptyObjects)
-	// TODO: Intermediate processing
+	// TODO: Trie prefetch (if needed)
+
+	// Process all storage updates concurrently. The state object update root
+	// method will internally call a blocking trie fetch from the prefetcher,
+	// so there's no need to explicitly wait for the prefetchers to finish.
+
+	var (
+		start   = time.Now() // Start time for performance measurement
+		workers errgroup.Group
+	)
+	// Verkle trie implementation is ignored for now as not used in the original code.
+	for addr, op := range s.mutations {
+		if op.applied || op.isDelete() {
+			continue
+		}
+		obj := s.stateObjects[addr]
+		workers.Go(func() error {
+			// Verkele trie updateTrie() is ignored for now as not used in the original code.
+			obj.updateRoot()
+
+			// if s.witness != nil && obj.trie != nil ... (omitted for now)
+			return nil
+		})
+	}
+	workers.Wait()
+	s.StorageUpdates += time.Since(start)
+
+	// Trie prefetching is not implemented in the current version.
+
+	// var (
+	// 	usedAddrs    []common.Address
+	// 	deletedAddrs []common.Address
+	//) (not needed for now)
+
+	// TODO: Perform updates for Accounts' state
+	// for addr, op := range s.mutations {
+	// }
+
 	return common.Hash{}
 }
 
@@ -119,4 +184,14 @@ func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, er
 		return common.Hash{}, err
 	}
 	return ret.root, nil
+}
+
+// markUpdate marks the given address as mutated and needs to be updated in the stateDB.
+// Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 1413
+func (s *StateDB) markUpdate(addr common.Address) {
+	if _, ok := s.mutations[addr]; !ok {
+		s.mutations[addr] = &mutation{}
+	}
+	s.mutations[addr].applied = false
+	s.mutations[addr].typ = update
 }
