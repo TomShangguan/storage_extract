@@ -72,8 +72,7 @@ func (s *StateObject) SetState(key, value common.Hash) common.Hash {
 	if prev == value {
 		return prev
 	}
-	// TODO: s.db.journal.setState(s, key, prev, value)
-	// The current implementation doesn't support journal.
+	s.db.journal.storageChange(s.address, key, prev, origin)
 	s.setState(key, value, origin)
 	return prev
 }
