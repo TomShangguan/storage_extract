@@ -44,3 +44,31 @@
 3. Complete the database interface and implement the mock key-value store for `CachingDB`.
 4. Implement the `OpenStorageTrie` and related trie operations.
 5. Address all remaining placeholder and unimplemented functions in the state management code.
+
+
+## 2025/5/20 Progress
+
+### Newly Implemented Components
+- **Trie Package**
+  - Enhanced documentation for MPT operations
+  - Improved insert function logic with detailed examples
+  - Better commented code structure for:
+    - shortNode handling
+    - fullNode operations 
+    - nil node cases
+  - Clear explanation of MPT path compression mechanism
+
+### TODOs
+1. Implement trie delete operations
+2. Add support for hash node handling
+3. Create high-level user interface for trie operations:
+   - Add simple key-value get/set methods
+   - Implement trie traversal functions
+   - Add trie snapshot functionality
+4. Implement storage proof generation:
+   - Merkle proof generation
+   - Proof verification methods
+5. Add trie import/export functionality:
+   - JSON serialization support
+   - State dump utilities
+   - Trie reconstruction from dump
