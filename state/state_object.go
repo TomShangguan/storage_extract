@@ -16,6 +16,7 @@ type StateObject struct {
 	address  common.Address      // address of ethereum account
 	addrHash common.Hash         // hash of the address
 	origin   *types.StateAccount // original state account
+	data     types.StateAccount  // Account data with all mutations applied in the scope of block
 
 	trie Trie // storage trie, which becomes non-nil on first access
 
@@ -48,6 +49,7 @@ func newObject(db *StateDB, addr common.Address, acct *types.StateAccount) *Stat
 		address:      addr,
 		addrHash:     crypto.Keccak256Hash(addr[:]),
 		origin:       origin,
+		data:         *acct,
 		dirtyStorage: make(Storage),
 	}
 }
@@ -55,11 +57,11 @@ func newObject(db *StateDB, addr common.Address, acct *types.StateAccount) *Stat
 // getTrie returns the associated storage trie. The trie will be opened if it's
 // not loaded previously. An error will be returned if trie can't be loaded.
 //
-// TODO: Support read trie from the database
+// TODO: Support read trie from the database and triedb parameter.
 // Original function: github.com/ethereum/go-ethereum/core/state/state_object.go line 124
 func (s *StateObject) getTrie() (Trie, error) {
 	if s.trie == nil {
-		tr, err := s.db.db.OpenStorageTrie(s.db.originalRoot, s.address, s.data.Root, s.db.trie)
+		tr, err := s.db.db.OpenStorageTrie(s.db.originalRoot, s.address, s.data.Root)
 		if err != nil {
 			return nil, err
 		}
@@ -195,14 +197,14 @@ func (s *StateObject) updateTrie() (Trie, error) {
 		}
 		if (value != common.Hash{}) {
 			if err := tr.UpdateStorage(s.address, key[:], common.TrimLeftZeroes(value[:])); err != nil {
-				// TODO: handle error
+				// TODO: handle error (s.db.setError(err))
 				return nil, err
 			}
 		}
 	}
 	// TODO: handle deletions
 	s.uncommittedStorage = make(Storage) // empties the commit markers
-	return nil, nil
+	return tr, nil
 }
 
 // updateRoot flushes all cached storage mutations to trie, recalculating the

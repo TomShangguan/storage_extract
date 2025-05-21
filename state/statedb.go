@@ -28,6 +28,10 @@ type StateDB struct {
 	stateObjects map[common.Address]*StateObject
 	journal      *journal
 
+	// originalRoot is the pre-state root, before any changes were made.
+	// It will be updated when the Commit is called.
+	originalRoot common.Hash
+
 	// This map tracks the account mutations that occurred during the
 	// transition. Uncommitted mutations belonging to the same account
 	// can be merged into a single one which is equivalent from database's
@@ -35,6 +39,19 @@ type StateDB struct {
 	mutations map[common.Address]*mutation
 
 	StorageUpdates time.Duration // Time taken for storage updates
+}
+
+// New creates a new state from a given trie.
+// Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 161
+func New(root common.Hash, db Database) (*StateDB, error) {
+	// Current implementation ignored the trie loading and doesn't support many elements used in the original code.
+	sdb := &StateDB{
+		db:           db,
+		stateObjects: make(map[common.Address]*StateObject),
+		journal:      newJournal(),
+		mutations:    make(map[common.Address]*mutation),
+	}
+	return sdb, nil
 }
 
 // SetState sets the state of the given address and key to the given value.

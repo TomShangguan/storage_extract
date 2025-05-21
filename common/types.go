@@ -42,3 +42,6 @@ func (h *Hash) SetBytes(b []byte) {
 type Address [AddressLength]byte
 
 // Address related functions
+
+// Bytes gets the string representation of the underlying address.
+func (a Address) Bytes() []byte { return a[:] }

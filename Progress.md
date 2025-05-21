@@ -43,5 +43,4 @@
 2. Add prefetch logic and committed state retrieval from the database in `finalise`.
 3. Complete the database interface and implement the mock key-value store for `CachingDB`.
 4. Implement the `OpenStorageTrie` and related trie operations.
-5. Fix `Keccak256Hash` to return the correct hash value.
-6. Address all remaining placeholder and unimplemented functions in the state management code.
+5. Address all remaining placeholder and unimplemented functions in the state management code.

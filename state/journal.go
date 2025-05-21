@@ -19,6 +19,13 @@ type journal struct {
 	dirties map[common.Address]int // Dirty accounts and the number of changes
 }
 
+// newJournal creates a new journal instance.
+func newJournal() *journal {
+	return &journal{
+		dirties: make(map[common.Address]int),
+	}
+}
+
 // append inserts a new modification entry to the end of the change journal.
 func (j *journal) append(entry journalEntry) {
 	j.entries = append(j.entries, entry)
