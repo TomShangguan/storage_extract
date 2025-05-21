@@ -45,6 +45,7 @@
 4. Implement the `OpenStorageTrie` and related trie operations.
 5. Address all remaining placeholder and unimplemented functions in the state management code.
 
+---
 
 ## 2025/5/20 Progress
 
