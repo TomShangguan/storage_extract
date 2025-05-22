@@ -60,6 +60,13 @@ func (t *StateTrie) UpdateStorage(_ common.Address, key, value []byte) error {
 	return nil
 }
 
+// Hash returns the root hash of StateTrie. It does not write to the
+// database and can be used even if the trie doesn't have one.
+// Original function: github.com/ethereum/go-ethereum/trie/secure_trie.go line 271
+func (t *StateTrie) Hash() common.Hash {
+	return t.trie.Hash()
+}
+
 // hashKey returns the hash of key as an ephemeral buffer.
 // The caller must not hold onto the return value because it will become
 // invalid on the next call to hashKey or secKey.

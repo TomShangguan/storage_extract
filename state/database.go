@@ -20,7 +20,12 @@ type Trie interface {
 	// any existing value is deleted from the trie. The value bytes must not be modified
 	// by the caller while they are stored in the trie. If a node was not found in the
 	// database, a trie.MissingNodeError is returned.
+	// Implementation in secure_trie.go
 	UpdateStorage(addr common.Address, key, value []byte) error
+
+	// Hash returns the root hash of the trie. It does not write to the database and
+	// can be used even if the trie doesn't have one.
+	Hash() common.Hash
 }
 
 // CachingDB is an implementation of Database interface.

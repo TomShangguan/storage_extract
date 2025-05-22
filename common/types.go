@@ -37,6 +37,9 @@ func (h *Hash) SetBytes(b []byte) {
 	copy(h[HashLength-len(b):], b)
 }
 
+// Bytes gets the byte representation of the underlying hash.
+func (h Hash) Bytes() []byte { return h[:] }
+
 // /////////////////////////////////////////////////////////////////////////
 // Address represents the 20 byte address of an Ethereum account.
 type Address [AddressLength]byte

@@ -18,6 +18,23 @@ package trie
 // in the case of an odd number. All remaining nibbles (now an even number) fit properly
 // into the remaining bytes. Compact encoding is used for nodes stored on disk.
 
+func hexToCompact(hex []byte) []byte {
+	terminator := byte(0)
+	if hasTerm(hex) {
+		terminator = 1
+		hex = hex[:len(hex)-1]
+	}
+	buf := make([]byte, len(hex)/2+1)
+	buf[0] = terminator << 5 // the flag byte
+	if len(hex)&1 == 1 {
+		buf[0] |= 1 << 4 // odd flag
+		buf[0] |= hex[0] // first nibble is contained in the first byte
+		hex = hex[1:]
+	}
+	decodeNibbles(hex, buf[1:])
+	return buf
+}
+
 func keybytesToHex(str []byte) []byte {
 	l := len(str)*2 + 1
 	var nibbles = make([]byte, l)
@@ -27,6 +44,12 @@ func keybytesToHex(str []byte) []byte {
 	}
 	nibbles[l-1] = 16
 	return nibbles
+}
+
+func decodeNibbles(nibbles []byte, bytes []byte) {
+	for bi, ni := 0, 0; ni < len(nibbles); bi, ni = bi+1, ni+2 {
+		bytes[bi] = nibbles[ni]<<4 | nibbles[ni+1]
+	}
 }
 
 // prefixLen returns the length of the common prefix of a and b.
@@ -41,4 +64,9 @@ func prefixLen(a, b []byte) int {
 		}
 	}
 	return i
+}
+
+// hasTerm returns whether a hex key has the terminator flag.
+func hasTerm(s []byte) bool {
+	return len(s) > 0 && s[len(s)-1] == 16
 }

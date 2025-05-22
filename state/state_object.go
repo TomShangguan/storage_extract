@@ -177,7 +177,7 @@ func (s *StateObject) updateTrie() (Trie, error) {
 	var err error
 	tr, err := s.getTrie()
 	if err != nil {
-		// TODO: handle error
+		// TODO: handle error (db)
 		return nil, err
 	}
 	// 	var (

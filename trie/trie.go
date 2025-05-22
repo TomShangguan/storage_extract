@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"storage_extract/common"
+	"storage_extract/types"
 )
 
 // Trie is a Merkle Patricia Trie. Use New to create a trie that sits on
@@ -159,4 +160,29 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 	default:
 		panic(fmt.Sprintf("%T: invalid node: %v", n, n))
 	}
+}
+
+// Hash returns the root hash of the trie. It does not write to the
+// database and can be used even if the trie doesn't have one.
+// Original function: github.com/ethereum/go-ethereum/trie/trie.go line 609
+func (t *Trie) Hash() common.Hash {
+	hash, cached := t.hashRoot()
+	t.root = cached
+	return common.BytesToHash(hash.(hashNode))
+}
+
+// hashRoot calculates the root hash of the given trie
+// Oringinal function: github.com/ethereum/go-ethereum/trie/trie.go line 663
+func (t *Trie) hashRoot() (node, node) {
+	if t.root == nil {
+		return hashNode(types.EmptyRootHash.Bytes()), nil
+	}
+	// If the number of changes is below 100, we let one thread handle it
+	h := newHasher(t.unhashed >= 100)
+	defer func() {
+		returnHasherToPool(h)
+		t.unhashed = 0
+	}()
+	hashed, cached := h.hash(t.root, true)
+	return hashed, cached
 }
