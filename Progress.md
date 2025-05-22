@@ -73,3 +73,37 @@
    - JSON serialization support
    - State dump utilities
    - Trie reconstruction from dump
+
+---
+
+## 2025/5/21 Progress
+
+### Newly Implemented Components
+- **Trie Package**
+  - Detailed MPT hashing implementation
+  - Node hash caching mechanism
+  - Parallel processing for fullNode hashing
+  - Memory pooling for hashers
+  - Clear documentation with examples showing:
+    - Collapsed vs cached node handling
+    - Size-based node encoding decisions
+    - Hash computation process
+
+### TODOs
+1. Implement frontend components:
+   - Tree visualization component
+   - Node inspection panel
+   - Interactive trie manipulation UI
+   - Real-time trie state display
+
+2. Backend API development:
+   - RESTful endpoints for trie operations
+   - WebSocket support for real-time updates
+   - Query endpoints for trie traversal
+   - Batch operation support
+
+3. Documentation:
+   - API documentation
+   - Usage examples
+   - Integration guides
+   - Performance guidelines
