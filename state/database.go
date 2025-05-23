@@ -26,6 +26,11 @@ type Trie interface {
 	// Hash returns the root hash of the trie. It does not write to the database and
 	// can be used even if the trie doesn't have one.
 	Hash() common.Hash
+
+	// PrintTrie prints the structure of the trie in a human-readable format.
+	// It recursively traverses the trie and displays each node with proper indentation.
+	// Notice: This function is not included in the original code.
+	PrintTrie()
 }
 
 // CachingDB is an implementation of Database interface.

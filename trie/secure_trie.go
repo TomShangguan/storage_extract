@@ -79,3 +79,7 @@ func (t *StateTrie) hashKey(key []byte) []byte {
 	returnHasherToPool(h)
 	return t.hashKeyBuf[:]
 }
+
+func (t *StateTrie) PrintTrie() {
+	t.trie.PrintTrie()
+}

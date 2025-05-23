@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereum Storage Visualizer</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ethereum MPT Storage Visualizer</h1>
+        </header>
+        
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="account-section">
+                    <h2>Account</h2>
+                    <div class="input-group">
+                        <input type="text" id="address-input" placeholder="Enter Ethereum address (0x...)">
+                        <button id="create-account-btn">Create/Load Account</button>
+                    </div>
+                    <div id="current-account" class="info-display"></div>
+                </div>
+                
+                <div class="storage-section">
+                    <h2>Storage Key-Value Pairs</h2>
+                    <div class="storage-form">
+                        <div class="input-group">
+                            <input type="text" id="storage-key" placeholder="Key (0x...)">
+                            <input type="text" id="storage-value" placeholder="Value (0x...)">
+                            <button id="add-storage-btn">Add</button>
+                        </div>
+                    </div>
+                    <div class="storage-list" id="storage-list">
+                        <!-- Storage items will be added here -->
+                    </div>
+                    <button id="update-trie-btn" disabled>Update Trie</button>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="trie-section">
+                    <h2>Merkle Patricia Trie Visualization</h2>
+                    <div class="trie-info">
+                        <div>Root Hash: <span id="root-hash">-</span></div>
+                    </div>
+                    <div class="view-controls">
+                        <button id="text-view-btn" class="active">Text View</button>
+                        <button id="tree-view-btn">Tree View</button>
+                    </div>
+                    <div class="trie-visualization">
+                        <div id="text-view" class="view-content active">
+                            <pre id="trie-text">No trie data available. Create an account and add storage items.</pre>
+                        </div>
+                        <div id="tree-view" class="view-content">
+                            <div id="trie-diagram"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/js/api-client.js"></script>
+    <script src="/js/storage-manager.js"></script>
+    <script src="/js/trie-visualizer.js"></script>
+    <script src="/js/main.js"></script>
+</body>
+</html>

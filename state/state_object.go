@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"storage_extract/common"
 	"storage_extract/crypto"
 	"storage_extract/types"
@@ -45,12 +46,14 @@ func newObject(db *StateDB, addr common.Address, acct *types.StateAccount) *Stat
 		acct = types.NewEmptyStateAccount()
 	}
 	return &StateObject{
-		db:           db,
-		address:      addr,
-		addrHash:     crypto.Keccak256Hash(addr[:]),
-		origin:       origin,
-		data:         *acct,
-		dirtyStorage: make(Storage),
+		db:                 db,
+		address:            addr,
+		addrHash:           crypto.Keccak256Hash(addr[:]),
+		origin:             origin,
+		data:               *acct,
+		dirtyStorage:       make(Storage),
+		uncommittedStorage: make(Storage),
+		pendingStorage:     make(Storage),
 	}
 }
 
@@ -216,6 +219,13 @@ func (s *StateObject) updateRoot() {
 	tr, err := s.updateTrie()
 	if err != nil || tr == nil {
 		return
+	}
+
+	// Print the trie structure for visualization and debugging
+	// This will show the complete structure of the MPT after updates
+	if tr != nil {
+		fmt.Printf("\n==== Storage Trie for Account %x ====\n", s.address)
+		tr.PrintTrie()
 	}
 	s.data.Root = tr.Hash()
 }
