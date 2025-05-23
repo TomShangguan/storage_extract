@@ -107,3 +107,34 @@
    - Usage examples
    - Integration guides
    - Performance guidelines
+
+---
+
+## 2025/5/22 Progress
+
+### Newly Implemented Components
+- **Frontend Implementation**
+  - Interactive UI Components:
+    - Account creation and management
+    - Storage key-value pair handling
+    - MPT visualization interface
+  - API Integration:
+    - Account API endpoints connection
+    - Storage operations integration
+    - Trie update communication
+
+### TODOs
+1. Fix frontend issues:
+   - Address creation response handling
+   - Trie visualization update mechanism
+   - Real-time state reflection
+   - Error message display
+
+2. Implement Proof Service:
+   - Add Merkle proof generation
+   - Create proof verification system
+   - Implement proof serialization
+   - Add API endpoints for proof operations:
+     * Generate proof
+     * Verify proof
+   - Create proof visualization components
