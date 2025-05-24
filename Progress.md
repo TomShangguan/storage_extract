@@ -138,3 +138,26 @@
      * Generate proof
      * Verify proof
    - Create proof visualization components
+
+---
+
+## 2025/5/23 Progress
+
+### Newly Implemented Components
+1. Frontend Improvements
+  - Fixed address creation responsiveness
+  - Implemented single account MPT operations
+  - Enhanced storage value insertion
+2. Bug Fixes
+  - Fixed unresponsive address creation
+  - Improved state synchronization
+  - Enhanced real-time updates for trie changes
+
+### TODOs
+1. Enhance MPT Visualization
+
+2. Implement Proof Service:
+   - Develop Merkle proof generation
+   - Add proof verification system
+   - Create proof visualization interface
+   - Implement proof API endpoints:

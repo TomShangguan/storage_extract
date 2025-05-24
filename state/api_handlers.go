@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"storage_extract/common"
+	"strings"
 )
 
 // Global state database instances
@@ -40,7 +41,7 @@ func StartServer(port string) error {
 // setupAPIHandlers registers API endpoint handlers
 func setupAPIHandlers() {
 	http.HandleFunc("/api/account/create", handleCreateAccount)
-	http.HandleFunc("/api/storage/set", handleSetStorage)
+	http.HandleFunc("/api/account/get", handleGetAccount)
 	http.HandleFunc("/api/storage/batch", handleBatchStorage)
 	http.HandleFunc("/api/trie/update", handleUpdateTrie)
 }
@@ -81,22 +82,23 @@ func handleCreateAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	addr := common.HexToAddress(req.Address)
-	stateDB.getOrNewStateObject(addr)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "success",
-		"address": req.Address,
-	})
+	obj := stateDB.getOrNewStateObject(addr)
+	if obj == nil {
+		writeError(w, "Could not create or get account", http.StatusInternalServerError)
+		return
+	}
+	obj.finalise()
+	obj.updateTrie()
+	writeTrieResponse(w, "success", req.Address, obj)
 }
 
-// handleSetStorage handles storage key-value setting requests
-func handleSetStorage(w http.ResponseWriter, r *http.Request) {
+// handleGetAccount handles account retrieval requests
+func handleGetAccount(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -104,29 +106,22 @@ func handleSetStorage(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Address string `json:"address"`
-		Key     string `json:"key"`
-		Value   string `json:"value"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	addr := common.HexToAddress(req.Address)
-	key := common.HexToHash(req.Key)
-	value := common.HexToHash(req.Value)
-
-	prevValue := stateDB.SetState(addr, key, value)
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":        "success",
-		"address":       req.Address,
-		"key":           req.Key,
-		"value":         req.Value,
-		"previousValue": prevValue.Hex(),
-	})
+	obj := stateDB.getOrNewStateObject(addr)
+	if obj == nil {
+		writeError(w, "Could not get account", http.StatusInternalServerError)
+		return
+	}
+	obj.finalise()
+	obj.updateTrie()
+	writeTrieResponse(w, "success", req.Address, obj)
 }
 
 // handleBatchStorage handles batch storage updates
@@ -142,24 +137,25 @@ func handleBatchStorage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	addr := common.HexToAddress(req.Address)
+	obj := stateDB.getOrNewStateObject(addr)
+	if obj == nil {
+		writeError(w, "Could not get account", http.StatusInternalServerError)
+		return
+	}
 
 	for keyHex, valueHex := range req.Storage {
 		key := common.HexToHash(keyHex)
 		value := common.HexToHash(valueHex)
 		stateDB.SetState(addr, key, value)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":         "success",
-		"address":        req.Address,
-		"itemsProcessed": fmt.Sprintf("%d", len(req.Storage)),
-	})
+	obj.finalise()
+	obj.updateTrie()
+	writeTrieResponse(w, "success", req.Address, obj)
 }
 
 // handleUpdateTrie handles trie update requests
@@ -174,29 +170,64 @@ func handleUpdateTrie(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		writeError(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	// Calculate intermediate root hash to update MPT
-	rootHash := stateDB.IntermediateRoot(false)
-
-	// Get account object
 	addr := common.HexToAddress(req.Address)
-	obj := stateDB.getStateObject(addr)
-
-	// Prepare response with visualization data if available
-	response := map[string]interface{}{
-		"rootHash": rootHash.Hex(),
-		"textData": "Trie updated successfully. Root hash calculated.",
+	obj := stateDB.getOrNewStateObject(addr)
+	if obj == nil {
+		writeError(w, "Could not get account", http.StatusInternalServerError)
+		return
 	}
+	obj.finalise()
+	obj.updateTrie()
+	writeTrieResponse(w, "success", req.Address, obj)
+}
 
-	// If object exists and has storage trie, add trie visualization data
-	if obj != nil && obj.trie != nil {
-		// TODO: Add trie visualization data
-		// This would require implementing interfaces for trie visualization
-	}
-
+// writeTrieResponse writes a trie response to the HTTP response
+func writeTrieResponse(w http.ResponseWriter, status, address string, obj *StateObject) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	var rootHash, textData, trieData string
+	if obj.trie != nil {
+		rootHash = obj.trie.Hash().Hex()
+		textBuilder := &strings.Builder{}
+		fmt.Fprintf(textBuilder, "==== Storage Trie for Account %x ====\n", obj.address)
+		fmt.Fprintf(textBuilder, "Root Hash: %x\n", obj.trie.Hash())
+		fmt.Fprintf(textBuilder, "\nHierarchy:\n")
+		if printer, ok := any(obj.trie).(interface{ PrintTrieTo(w *strings.Builder) }); ok {
+			printer.PrintTrieTo(textBuilder)
+		} else {
+			obj.trie.PrintTrie()
+		}
+		textData = textBuilder.String()
+		if converter, ok := any(obj.trie).(interface{ ConvertToJSON() ([]byte, error) }); ok {
+			if jsonBytes, err := converter.ConvertToJSON(); err == nil {
+				trieData = string(jsonBytes)
+			}
+		}
+	} else {
+		rootHash = "-"
+		textData = "No trie data available."
+		trieData = ""
+	}
+	resp := map[string]interface{}{
+		"status":  status,
+		"address": address,
+		"trie": map[string]interface{}{
+			"rootHash": rootHash,
+			"textData": textData,
+			"trieData": trieData,
+		},
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+// writeError writes an error response to the HTTP response
+func writeError(w http.ResponseWriter, msg string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"error": msg,
+	})
 }

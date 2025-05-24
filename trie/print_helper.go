@@ -26,6 +26,17 @@ func (t *Trie) PrintTrie() {
 	fmt.Println("=====================\n")
 }
 
+// PrintTrieTo writes the trie structure to a strings.Builder instead of stdout
+func (t *Trie) PrintTrieTo(w *strings.Builder) {
+	fmt.Fprintf(w, "\n==== Trie Structure ====\n")
+	fmt.Fprintf(w, "Owner: %x\n", t.owner)
+	fmt.Fprintf(w, "Root Hash: %x\n", t.Hash())
+	fmt.Fprintf(w, "Uncommitted Changes: %d\n", t.uncommitted)
+	fmt.Fprintf(w, "\nHierarchy:\n")
+	printNodeTo(t.root, w, "", 0)
+	fmt.Fprintf(w, "=====================\n")
+}
+
 // ConvertToJSON 将Trie转换为JSON格式
 func (t *Trie) ConvertToJSON() ([]byte, error) {
 	rootNode := convertNodeToTrieNode(t.root)
@@ -127,6 +138,42 @@ func printNode(n node, prefix string, depth int) {
 			fmt.Printf("%s%s└─ Value: %x\n", indent, prefix, []byte(n))
 		} else {
 			fmt.Printf("%s%s└─ Value: %x...%x (len=%d)\n",
+				indent, prefix, n[:4], n[len(n)-4:], len(n))
+		}
+	}
+}
+
+// printNodeTo is like printNode but writes to a strings.Builder
+func printNodeTo(n node, w *strings.Builder, prefix string, depth int) {
+	if n == nil {
+		fmt.Fprintf(w, "%s<nil>\n", strings.Repeat("  ", depth))
+		return
+	}
+
+	indent := strings.Repeat("  ", depth)
+
+	switch n := n.(type) {
+	case *shortNode:
+		fmt.Fprintf(w, "%s%s└─ Short[%s] Key:%x\n", indent, prefix, nodeStateMarker(n.flags), n.Key)
+		printNodeTo(n.Val, w, "", depth+1)
+
+	case *fullNode:
+		fmt.Fprintf(w, "%s%s└─ Branch[%s]\n", indent, prefix, nodeStateMarker(n.flags))
+		for i, child := range n.Children {
+			if child != nil {
+				childPrefix := fmt.Sprintf("[%x] ", i)
+				printNodeTo(child, w, childPrefix, depth+1)
+			}
+		}
+
+	case hashNode:
+		fmt.Fprintf(w, "%s%s└─ Hash: %x\n", indent, prefix, []byte(n))
+
+	case valueNode:
+		if len(n) <= 8 {
+			fmt.Fprintf(w, "%s%s└─ Value: %x\n", indent, prefix, []byte(n))
+		} else {
+			fmt.Fprintf(w, "%s%s└─ Value: %x...%x (len=%d)\n",
 				indent, prefix, n[:4], n[len(n)-4:], len(n))
 		}
 	}

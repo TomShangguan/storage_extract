@@ -5,12 +5,12 @@ class AccountManager {
     /**
      * Initialize the account manager
      */
-    constructor() {
+    constructor(onAccountChange) {
         this.currentAccount = null;
         this.addressInput = document.getElementById('address-input');
         this.createButton = document.getElementById('create-account-btn');
         this.accountDisplay = document.getElementById('current-account');
-        
+        this.onAccountChange = onAccountChange;
         this.createButton.addEventListener('click', () => this.createAccount());
     }
     
@@ -39,6 +39,9 @@ class AccountManager {
             await ApiClient.createAccount(address);
             this.currentAccount = address;
             this.updateAccountDisplay();
+            if (typeof this.onAccountChange === 'function') {
+                this.onAccountChange(address);
+            }
             return true;
         } catch (error) {
             console.error('Error creating account:', error);
