@@ -73,6 +73,13 @@ func (s *StateObject) getTrie() (Trie, error) {
 	return s.trie, nil
 }
 
+// GetState retrieves a value associated with the given storage key.
+// Original function: github.com/ethereum/go-ethereum/core/state/state_object.go line 154
+func (s *StateObject) GetState(key common.Hash) common.Hash {
+	value, _ := s.getState(key)
+	return value
+}
+
 // getState retrieves a value associated with the given storage key, along with
 // its original value.
 // Original function: github.com/ethereum/go-ethereum/core/state/state_object.go line 160
@@ -94,8 +101,10 @@ func (s *StateObject) getState(key common.Hash) (common.Hash, common.Hash) {
 // without any mutations caused in the current execution.
 // Orignal function: github.com/ethereum/go-ethereum/core/state/state_object.go line 170
 func (s *StateObject) GetCommittedState(key common.Hash) common.Hash {
-	// TODO: follow the original code and read from the database
-	// The current implementation only plays a role of a placeholder.
+	if value, pending := s.pendingStorage[key]; pending {
+		return value
+	}
+	// TODO: follow the original code and read from the database, the current implementation only read from the pendingStorage
 	return common.Hash{}
 }
 
@@ -216,6 +225,7 @@ func (s *StateObject) updateTrie() (Trie, error) {
 func (s *StateObject) updateRoot() {
 	// Flush cached storage mutations into trie, short circuit if any error
 	// is occurred or there is no change in the trie.
+	println("updateRoot called")
 	tr, err := s.updateTrie()
 	if err != nil || tr == nil {
 		return

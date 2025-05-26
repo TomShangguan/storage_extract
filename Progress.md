@@ -160,4 +160,4 @@
    - Develop Merkle proof generation
    - Add proof verification system
    - Create proof visualization interface
-   - Implement proof API endpoints:
+   - Implement proof API endpoints

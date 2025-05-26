@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ethereum MPT Storage Visualizer</title>
     <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/trie-visualizer.css">
 </head>
 <body>
     <div class="container">
@@ -14,12 +15,12 @@
         <main class="main-content">
             <section class="left-panel">
                 <div class="account-section">
-                    <h2>Account</h2>
+                    <h2>Accounts</h2>
                     <div class="input-group">
                         <input type="text" id="address-input" placeholder="Enter Ethereum address (0x...)" autocomplete="off">
                         <button id="create-account-btn">Create/Load Account</button>
                     </div>
-                    <div id="current-account" class="info-display">No account selected</div>
+                    <ul id="account-list" class="account-list"></ul>
                 </div>
                 <div class="storage-section">
                     <h2>Storage Key-Value Pairs</h2>
@@ -56,6 +57,8 @@
             </section>
         </main>
     </div>
+    <script src="/js/api-client.js"></script>
+    <script src="/js/trie-visualizer.js"></script>
     <script src="/js/main.js"></script>
 </body>
 </html>

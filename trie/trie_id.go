@@ -11,6 +11,7 @@ type ID struct {
 // StorageTrieID constructs an identifier for storage trie which belongs to a certain
 // state and contract specified by the stateRoot and owner.
 func StorageTrieID(stateRoot common.Hash, owner common.Hash, root common.Hash) *ID {
+	println("StorageTrieID called: owner", owner.Hex())
 	return &ID{
 		StateRoot: stateRoot,
 		Owner:     owner,

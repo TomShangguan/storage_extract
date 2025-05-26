@@ -142,6 +142,7 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 		obj := s.stateObjects[addr]
 		workers.Go(func() error {
 			// Verkele trie updateTrie() is ignored for now as not used in the original code.
+			println("updateRoot called")
 			obj.updateRoot()
 
 			// if s.witness != nil && obj.trie != nil ... (omitted for now)
@@ -196,11 +197,12 @@ func (s *StateDB) commitAndFlush(block uint64, deleteEmptyObjects bool) (*stateU
 func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, error) {
 	// Placeholder
 	deleteEmptyObjects = false
-	ret, err := s.commitAndFlush(block, deleteEmptyObjects)
+	_, err := s.commitAndFlush(block, deleteEmptyObjects)
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return ret.root, nil
+	println("Commit called")
+	return common.Hash{}, nil
 }
 
 // markUpdate marks the given address as mutated and needs to be updated in the stateDB.
