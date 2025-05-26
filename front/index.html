@@ -32,6 +32,17 @@
                     <div id="storage-list" class="storage-list"></div>
                     <button id="update-trie-btn" disabled>Update Trie</button>
                 </div>
+                <div class="proof-section">
+                    <h2>Merkle Proof</h2>
+                    <div class="input-group">
+                        <input type="text" id="proof-key" placeholder="Key to prove (0x...)" autocomplete="off">
+                        <button id="get-proof-btn">Get Proof</button>
+                    </div>
+                    <div id="proof-result" class="proof-result">
+                        <div>Root Hash: <span id="proof-root-hash">-</span></div>
+                        <div>Value: <span id="proof-value">-</span></div>
+                    </div>
+                </div>
             </section>
             <section class="right-panel">
                 <div class="trie-section">

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"storage_extract/common"
 	"storage_extract/trie"
+	"storage_extract/trie/trienode"
 	"strings"
 )
 
@@ -17,8 +18,6 @@ var (
 	db        = &CachingDB{}
 	stateDB   *StateDB
 	stateRoot = common.Hash{}
-	// originalKeys tracks original keys before hashing for each address
-	originalKeys = make(map[common.Address]map[string]string) // address -> hashedKey -> originalKey
 )
 
 func init() {
@@ -48,6 +47,7 @@ func setupAPIHandlers() {
 	http.HandleFunc("/api/account/get", handleGetAccount)
 	http.HandleFunc("/api/storage/batch", handleBatchStorage)
 	http.HandleFunc("/api/trie/update", handleUpdateTrie)
+	http.HandleFunc("/api/proof", handleProof)
 }
 
 // setupStaticFileServer configures static file serving
@@ -168,66 +168,16 @@ func handleBatchStorage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Initialize originalKeys for this address if needed
-	if originalKeys[addr] == nil {
-		originalKeys[addr] = make(map[string]string)
-	}
-
-	// Temporary storage for this batch of updates
-	keysToTrack := make(map[common.Hash]string)
-
 	for keyHex, valueHex := range req.Storage {
 		key := common.HexToHash(keyHex)
 		value := common.HexToHash(valueHex)
 		stateDB.SetState(addr, key, value)
-
-		// Remember this key for extraction after updating the trie
-		keysToTrack[key] = keyHex
 	}
 
 	// Force trie update to generate the actual trie keys
 	obj.updateRoot() // Call updateRoot which will internally update the trie
 
-	// Now extract the actual trie key path for each key
-	if obj.trie != nil {
-		// Dump all keys from the trie for debugging
-		fmt.Printf("[DEBUG] Storage trie nodes for address %s:\n", fmt.Sprintf("%x", addr))
-		// Use PrintTrie instead of undefined dumpAllNodesFromTrie
-		if t, ok := obj.trie.(interface{ PrintTrie() }); ok {
-			t.PrintTrie()
-		} // Extract the keys as they appear in the trie after hashing
-		for origKeyHash, origKeyHex := range keysToTrack {
-			// Get the value to confirm the key exists in the trie
-			val := obj.GetState(origKeyHash)
-
-			// If the key exists in the state, try to find it in the trie
-			// Compare with empty hash to check if it's zero
-			if val != (common.Hash{}) {
-				// Search through the trie and extract the actual key path
-				// Type assertion for StateTrie
-				if stateTrie, ok := obj.trie.(*trie.StateTrie); ok {
-					if trieKey, ok := findKeyInTrie(stateTrie, origKeyHash); ok {
-						// Store the mapping: trie key -> original key
-						originalKeys[addr][trieKey] = origKeyHex
-						fmt.Printf("[DEBUG] Found trie key for %s: %s\n", origKeyHex, trieKey)
-					}
-				}
-			}
-		}
-	}
-
-	// Add special hard-coded mapping for the key we saw in the debug output
-	// This is the key that appeared in the trie visualization
-	originalKeys[addr]["0b01000e020d0502070601020007030b02060e0e0c0d0f0d0701070e060a0302000c0f04040b040a0f0a0c020b000703020d090f0c0b0e020b070f0a000c0f0610"] = "0x1"
-
-	// Standard simple mappings as backup
-	for _, origKeyHex := range keysToTrack {
-		key := common.HexToHash(origKeyHex)
-		keyHashHex := fmt.Sprintf("%x", key.Bytes())
-		originalKeys[addr][keyHashHex] = origKeyHex
-		originalKeys[addr]["0x"+keyHashHex] = origKeyHex
-	}
-
+	// Send the response using the standard function
 	writeTrieResponse(w, "success", req.Address, obj)
 }
 
@@ -261,13 +211,67 @@ func handleUpdateTrie(w http.ResponseWriter, r *http.Request) {
 	writeTrieResponse(w, "success", req.Address, obj)
 }
 
+// handleProof handles Merkle proof generation requests
+func handleProof(w http.ResponseWriter, r *http.Request) {
+	debugLogRequest(r)
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Address string `json:"address"`
+		Key     string `json:"key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	addr := common.HexToAddress(req.Address)
+	obj := stateDB.getOrNewStateObject(addr)
+	if obj == nil || obj.trie == nil {
+		writeError(w, "Account or trie not found", http.StatusNotFound)
+		return
+	}
+	stateTrie, ok := obj.trie.(*trie.StateTrie)
+	if !ok {
+		writeError(w, "Trie type not supported for proof", http.StatusInternalServerError)
+		return
+	}
+	// Prepare proof set
+	proofDb := trienode.NewProofSet()
+	keyBytes := common.Hex2Bytes(req.Key)
+	// Generate the proof
+	err := stateTrie.Prove(keyBytes, proofDb)
+	if err != nil {
+		writeError(w, "Failed to generate proof: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Get the root hash
+	rootHash := stateTrie.Hash()
+	// Verify the proof and get the value
+	value, err := trie.VerifyProof(rootHash, keyBytes, proofDb)
+	if err != nil {
+		writeError(w, "Failed to verify proof: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var valueHex string
+	if value != nil {
+		valueHex = fmt.Sprintf("%x", value)
+	} else {
+		valueHex = ""
+	}
+	resp := map[string]interface{}{
+		"rootHash": rootHash.Hex(),
+		"value":    valueHex,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
+}
+
 // writeTrieResponse writes a trie response to the HTTP response
 func writeTrieResponse(w http.ResponseWriter, status, address string, obj *StateObject) {
 	w.Header().Set("Content-Type", "application/json")
 	var rootHash, textString, textData, trieData string
-
-	addr := common.HexToAddress(address)
-	addrOriginalKeys := originalKeys[addr] // Get original keys for this address
 
 	if obj.trie != nil {
 		rootHash = obj.trie.Hash().Hex()
@@ -277,41 +281,16 @@ func writeTrieResponse(w http.ResponseWriter, status, address string, obj *State
 
 		if stateTrie, ok := obj.trie.(*trie.StateTrie); ok {
 			// If it's a StateTrie
-
-			// We don't need to add key mappings separately anymore
-			// Original keys are now displayed directly in the hierarchy view
-
-			if len(addrOriginalKeys) > 0 {
-				// Use the version that integrates original key information
-				stateTrie.PrintTrieToFormattedWithKeys(formattedBuilder, addrOriginalKeys)
-			} else {
-				stateTrie.PrintTrieToFormatted(formattedBuilder)
-			}
+			stateTrie.PrintTrieToFormatted(formattedBuilder)
 			textString = formattedBuilder.String()
 			textData = textString // Send formatted text to frontend
 
 			// Create JSON data for tree view with original keys
-			if len(addrOriginalKeys) > 0 {
-				if jsonBytes, err := stateTrie.ConvertToJSONWithOriginalKeys(addrOriginalKeys); err == nil {
-					trieData = string(jsonBytes)
-				} else {
-					fmt.Printf("Error converting trie to JSON with original keys: %v\n", err)
-					// Fallback to regular conversion
-					if jsonBytes, err := stateTrie.ConvertToJSON(); err == nil {
-						trieData = string(jsonBytes)
-					} else {
-						fmt.Printf("Error converting StateTrie to JSON: %v\n", err)
-						trieData = ""
-					}
-				}
+			if jsonBytes, err := stateTrie.ConvertToJSON(); err == nil {
+				trieData = string(jsonBytes)
 			} else {
-				// No original keys available, use regular conversion
-				if jsonBytes, err := stateTrie.ConvertToJSON(); err == nil {
-					trieData = string(jsonBytes)
-				} else {
-					fmt.Printf("Error converting StateTrie to JSON: %v\n", err)
-					trieData = ""
-				}
+				fmt.Printf("Error converting StateTrie to JSON: %v\n", err)
+				trieData = ""
 			}
 		} else {
 			// Not a StateTrie - basic fallback
@@ -345,21 +324,4 @@ func writeError(w http.ResponseWriter, msg string, code int) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"error": msg,
 	})
-}
-
-// findKeyInTrie tries to locate a key in the trie and return its actual path
-func findKeyInTrie(t *trie.StateTrie, key common.Hash) (string, bool) {
-	// First, try to get the key path directly
-	if keyPath, ok := t.GetKeyPath(key.Bytes()); ok {
-		return fmt.Sprintf("%x", keyPath), true
-	}
-
-	// Fallback: Force our key to be visible in the tree view
-	// This is a hardcoded value based on the debug output we've seen
-	keyHex := fmt.Sprintf("%x", key.Bytes())
-	if keyHex == "0000000000000000000000000000000000000000000000000000000000000001" {
-		return "0b01000e020d0502070601020007030b02060e0e0c0d0f0d0701070e060a0302000c0f04040b040a0f0a0c020b000703020d090f0c0b0e020b070f0a000c0f0610", true
-	}
-
-	return "", false
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// TrieNode 结构用于JSON序列化，便于前端展示
+// TrieNode structure for JSON serialization, for frontend display
 type TrieNode struct {
 	Type            string          `json:"type"`
 	Key             string          `json:"key,omitempty"`
@@ -24,7 +24,7 @@ type TrieNode struct {
 	TotalSlotCount  int             `json:"totalSlotCount,omitempty"`  // Total number of slots in a branch
 }
 
-// PrintTrie 打印当前Trie结构的文本表示
+// PrintTrie print the text representation of the current trie structure
 func (t *Trie) PrintTrie() {
 	fmt.Printf("\n==== Trie Structure ====\n")
 	fmt.Printf("Owner: %x\n", t.owner)
@@ -58,24 +58,24 @@ func (t *Trie) PrintTrieToFormattedWithKeys(w *strings.Builder, originalKeys map
 	printNodeFormattedTo(t.root, w, "", 0, true, "", originalKeys)
 }
 
-// ConvertToJSON 将Trie转换为JSON格式
+// ConvertToJSON convert the trie to JSON format
 func (t *Trie) ConvertToJSON() ([]byte, error) {
 	rootNode := convertNodeToTrieNode(t.root, 0, -1, nil)
 	return json.Marshal(rootNode)
 }
 
-// ConvertToJSONWithOriginalKeys 将Trie转换为JSON格式，包含原始键信息
+// ConvertToJSONWithOriginalKeys convert the trie to JSON format with original keys
 func (t *Trie) ConvertToJSONWithOriginalKeys(originalKeys map[string]string) ([]byte, error) {
 	rootNode := convertNodeToTrieNode(t.root, 0, -1, originalKeys)
 	return json.Marshal(rootNode)
 }
 
-// convertNodeToTrieNode 将内部节点转换为前端友好的TrieNode结构
+// convertNodeToTrieNode convert the internal node to a frontend-friendly TrieNode structure
 func convertNodeToTrieNode(n node, depth int, branchIndex int, originalKeys map[string]string) *TrieNode {
 	return convertNodeToTrieNodeWithPath(n, depth, branchIndex, originalKeys, "")
 }
 
-// convertNodeToTrieNodeWithPath 递归转换节点为前端友好的TrieNode结构，并跟踪完整路径
+// convertNodeToTrieNodeWithPath recursive convert the node to a frontend-friendly TrieNode structure, and track the full path
 func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalKeys map[string]string, currentPath string) *TrieNode {
 	if n == nil {
 		return nil
@@ -89,7 +89,7 @@ func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalK
 		node := &TrieNode{
 			Type:        "short",
 			Key:         keyHex,
-			KeyPath:     fullKeyPath, // Store the full key path
+			KeyPath:     fullKeyPath,
 			Depth:       depth,
 			BranchIndex: branchIndex,
 		}
@@ -97,39 +97,6 @@ func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalK
 		// For root short nodes, make sure we emphasize that it's a root
 		if depth == 0 {
 			node.Type = "root_short" // Special type for styling in frontend
-		}
-
-		// Try to find the original key if available - more aggressive matching
-		// Special case for our known key
-		if keyHex == "0b01000e020d0502070601020007030b02060e0e0c0d0f0d0701070e060a0302000c0f04040b040a0f0a0c020b000703020d090f0c0b0e020b070f0a000c0f0610" {
-			node.OriginalKey = "0x1"
-			node.HashedKeyPath = keyHex
-		} else if originalKeys != nil {
-			// First try the full key path
-			if originalKey, exists := originalKeys[fullKeyPath]; exists {
-				node.OriginalKey = originalKey
-				node.HashedKeyPath = fullKeyPath // Store the hashed version explicitly
-			} else if originalKey, exists := originalKeys[keyHex]; exists {
-				// Then try just this key segment
-				node.OriginalKey = originalKey
-				node.HashedKeyPath = keyHex
-			} else {
-				// Try prefix matching for partial keys (common with storage tries)
-				for hashedKey, origKey := range originalKeys {
-					// If this full path matches a known hashed key, use that
-					if hashedKey == fullKeyPath || hashedKey == keyHex {
-						node.OriginalKey = origKey
-						node.HashedKeyPath = hashedKey
-						break
-					}
-					// If this full path is a prefix of a known hashed key, use that
-					if strings.HasPrefix(hashedKey, fullKeyPath) {
-						node.OriginalKey = origKey + " (prefix match)"
-						node.HashedKeyPath = fullKeyPath
-						break
-					}
-				}
-			}
 		}
 
 		// Determine the kind of shortNode based on what's inside Val
@@ -155,86 +122,47 @@ func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalK
 		return node
 
 	case *fullNode:
-		node := &TrieNode{
-			Type:        "branch",
-			Children:    make([]*TrieNode, 0, 17), // 16 + value
-			Depth:       depth,
-			BranchIndex: branchIndex,
-			KeyPath:     currentPath,
+		branchNode := &TrieNode{
+			Type:            "branch",
+			KeyPath:         currentPath,
+			Depth:           depth,
+			BranchIndex:     branchIndex,
+			FilledSlotCount: countFilledSlots(n.Children),
+			TotalSlotCount:  16,
+			SlotMap:         make(map[string]bool),
 		}
-
-		// For root branch nodes, emphasize that it's a root
-		if depth == 0 {
-			node.Type = "root_branch" // Special type for styling in frontend
-		}
-
-		// Track filled slots for visualization
-		var filledSlots = 0
-
-		// Create a complete map of all slots (filled and empty)
-		// This helps the frontend to visualize the branch structure better
-		node.SlotMap = make(map[string]bool)
 
 		for i, child := range n.Children {
-			slot := fmt.Sprintf("%x", i)
-			if child == nil {
-				node.SlotMap[slot] = false
-				continue
-			}
-
-			node.SlotMap[slot] = true
-			filledSlots++
-
-			childPath := currentPath + slot
-			childNode := convertNodeToTrieNodeWithPath(child, depth+1, i, originalKeys, childPath)
-			if childNode != nil {
-				node.Children = append(node.Children, childNode)
+			if child != nil {
+				childPath := fmt.Sprintf("%s%x", currentPath, i)
+				branchNode.SlotMap[fmt.Sprintf("%x", i)] = true
+				branchNode.Children = append(branchNode.Children, convertNodeToTrieNodeWithPath(child, depth+1, i, originalKeys, childPath))
+			} else {
+				branchNode.SlotMap[fmt.Sprintf("%x", i)] = false
 			}
 		}
-
-		// Add statistics about this branch node
-		node.FilledSlotCount = filledSlots
-		node.TotalSlotCount = 16
-
-		// Try to find the original key for this branch path
-		if originalKeys != nil && len(currentPath) > 0 {
-			for hashedKey, origKey := range originalKeys {
-				if strings.HasPrefix(hashedKey, currentPath) {
-					node.OriginalKey = origKey + " (branch path)"
-					node.HashedKeyPath = currentPath
-					break
-				}
-			}
-		}
-
-		// Only include hash if really needed
-		if n.flags.hash != nil && depth == 0 { // Only for root
-			node.Hash = fmt.Sprintf("%x", n.flags.hash)
-		}
-
-		return node
+		return branchNode
 
 	case hashNode:
 		return &TrieNode{
-			Type:        "hash",
-			Hash:        fmt.Sprintf("%x", n),
-			Depth:       depth,
-			BranchIndex: branchIndex,
+			Type: "hash",
+			Hash: fmt.Sprintf("%x", []byte(n)),
 		}
 
 	case valueNode:
 		return &TrieNode{
-			Type:        "value",
-			Value:       fmt.Sprintf("%x", n),
-			Depth:       depth,
-			BranchIndex: branchIndex,
+			Type:  "value",
+			Value: fmt.Sprintf("%x", []byte(n)),
+		}
+
+	default:
+		return &TrieNode{
+			Type: fmt.Sprintf("unknown (%T)", n),
 		}
 	}
-
-	return nil
 }
 
-// printNode 递归打印节点及其子节点，带有适当的缩进
+// printNode recursive print node and its children with appropriate indentation
 func printNode(n node, prefix string, depth int) {
 	if n == nil {
 		fmt.Printf("%s<nil>\n", strings.Repeat("  ", depth))
@@ -327,38 +255,6 @@ func printNodeFormattedTo(n node, w *strings.Builder, prefix string, depth int, 
 			fmt.Fprintf(w, "%s%s%s Short Node\n", indent, prefix, connector)
 			fmt.Fprintf(w, "%s   Key: %s\n", indent, keyHex)
 
-			// Check if we have an original key to display
-			originalKey := ""
-
-			// Special case for our known key
-			if keyHex == "0b01000e020d0502070601020007030b02060e0e0c0d0f0d0701070e060a0302000c0f04040b040a0f0a0c020b000703020d090f0c0b0e020b070f0a000c0f0610" {
-				originalKey = "0x1"
-			} else if originalKeys != nil {
-				// Try to find original key for this path
-				if origKey, exists := originalKeys[fullKeyPath]; exists {
-					originalKey = origKey
-				} else if origKey, exists := originalKeys[keyHex]; exists {
-					originalKey = origKey
-				} else {
-					// Try all possible key formats as a fallback
-					for hashedKey, origKey := range originalKeys {
-						if hashedKey == fullKeyPath || hashedKey == keyHex ||
-							strings.HasSuffix(fullKeyPath, hashedKey) || strings.HasSuffix(keyHex, hashedKey) {
-							originalKey = origKey
-							break
-						}
-					}
-				}
-			}
-
-			if originalKey != "" {
-				// Add 0x prefix if it doesn't already have one
-				if !strings.HasPrefix(originalKey, "0x") {
-					originalKey = "0x" + originalKey
-				}
-				fmt.Fprintf(w, "%s   Original Key: %s\n", indent, originalKey)
-			}
-
 			// Show the full path if available
 			if len(fullKeyPath) > 0 && fullKeyPath != keyHex {
 				fmt.Fprintf(w, "%s   Full Path: %s\n", indent, fullKeyPath)
@@ -378,42 +274,11 @@ func printNodeFormattedTo(n node, w *strings.Builder, prefix string, depth int, 
 			if depth == 0 {
 				fmt.Fprintf(w, "%s   (Root Node)\n", indent)
 			}
+
 		} else {
 			// This is a shortNode with another node as value
 			fmt.Fprintf(w, "%s%s%s Short Node\n", indent, prefix, connector)
 			fmt.Fprintf(w, "%s   Key: %s\n", indent, keyHex)
-
-			// Check if we have an original key to display
-			originalKey := ""
-
-			// Special case for our known key
-			if keyHex == "0b01000e020d0502070601020007030b02060e0e0c0d0f0d0701070e060a0302000c0f04040b040a0f0a0c020b000703020d090f0c0b0e020b070f0a000c0f0610" {
-				originalKey = "0x1"
-			} else if originalKeys != nil {
-				// Try to find original key for this path
-				if origKey, exists := originalKeys[fullKeyPath]; exists {
-					originalKey = origKey
-				} else if origKey, exists := originalKeys[keyHex]; exists {
-					originalKey = origKey
-				} else {
-					// Try all possible key formats as a fallback
-					for hashedKey, origKey := range originalKeys {
-						if hashedKey == fullKeyPath || hashedKey == keyHex ||
-							strings.HasSuffix(fullKeyPath, hashedKey) || strings.HasSuffix(keyHex, hashedKey) {
-							originalKey = origKey
-							break
-						}
-					}
-				}
-			}
-
-			if originalKey != "" {
-				// Add 0x prefix if it doesn't already have one
-				if !strings.HasPrefix(originalKey, "0x") {
-					originalKey = "0x" + originalKey
-				}
-				fmt.Fprintf(w, "%s   Original Key: %s\n", indent, originalKey)
-			}
 
 			// Show the full path if available
 			if len(fullKeyPath) > 0 && fullKeyPath != keyHex {
@@ -489,7 +354,18 @@ func printNodeFormattedTo(n node, w *strings.Builder, prefix string, depth int, 
 	}
 }
 
-// nodeStateMarker 返回表示节点状态的标记
+// countFilledSlots counts the number of non-nil children in a branch node
+func countFilledSlots(children [17]node) int {
+	count := 0
+	for _, child := range children {
+		if child != nil {
+			count++
+		}
+	}
+	return count
+}
+
+// nodeStateMarker
 func nodeStateMarker(flag nodeFlag) string {
 	if flag.hash != nil {
 		if flag.dirty {

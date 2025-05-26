@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
     const loadingMessage = document.getElementById('loading-message');
 
+    // Proof functionality
+    const proofKeyInput = document.getElementById('proof-key');
+    const getProofBtn = document.getElementById('get-proof-btn');
+    const proofRootHash = document.getElementById('proof-root-hash');
+    const proofValue = document.getElementById('proof-value');
+
     // State
     let accounts = []; // List of all created/loaded accounts
     let selectedAccount = null; // Currently selected account
@@ -385,4 +391,26 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTrieVisualization();
     setError('');
     setLoading(false);
+
+    // Proof functionality
+    getProofBtn.addEventListener('click', async function() {
+        const address = document.getElementById('address-input').value;
+        const key = proofKeyInput.value;
+
+        if (!address || !key) {
+            showError('Please enter both address and key');
+            return;
+        }
+
+        try {
+            showLoading();
+            const result = await ApiClient.getProof(address, key);
+            proofRootHash.textContent = result.rootHash;
+            proofValue.textContent = result.value || 'Not found';
+            hideLoading();
+        } catch (error) {
+            showError('Failed to get proof: ' + error.message);
+            hideLoading();
+        }
+    });
 });

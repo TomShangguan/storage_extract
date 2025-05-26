@@ -108,4 +108,29 @@ class ApiClient {
             throw error;
         }
     }
+    
+    /**
+     * Get a Merkle proof for a key in the trie
+     * @param {string} address - The Ethereum address
+     * @param {string} key - The storage key (hex)
+     * @returns {Promise} The response promise
+     */
+    static async getProof(address, key) {
+        try {
+            const response = await fetch('/api/proof', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ address, key })
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Error getting proof:', error);
+            throw error;
+        }
+    }
 }
