@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const addressInput = document.getElementById('address-input');
     const createAccountBtn = document.getElementById('create-account-btn');
-    const currentAccountDisplay = document.getElementById('current-account');
+    const accountListElem = document.getElementById('account-list');
     const storageKeyInput = document.getElementById('storage-key');
     const storageValueInput = document.getElementById('storage-value');
     const addStorageBtn = document.getElementById('add-storage-btn');
@@ -21,9 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
     const loadingMessage = document.getElementById('loading-message');
 
+    // Proof functionality
+    const proofKeyInput = document.getElementById('proof-key');
+    const getProofBtn = document.getElementById('get-proof-btn');
+    const proofRootHash = document.getElementById('proof-root-hash');
+    const proofValue = document.getElementById('proof-value');
+
     // State
-    let currentAccount = null;
-    let storageItems = {};
+    let accounts = []; // List of all created/loaded accounts
+    let selectedAccount = null; // Currently selected account
+    let pendingStorage = {}; // { address: { key: value, ... } }
     let currentView = 'text';
 
     // --- UI Helpers ---
@@ -39,27 +46,49 @@ document.addEventListener('DOMContentLoaded', () => {
             errorMessage.style.display = 'none';
         }
     }
-    function setCurrentAccount(addr) {
-        currentAccount = addr;
-        currentAccountDisplay.textContent = addr ? addr : 'No account selected';
+    function renderAccountList() {
+        accountListElem.innerHTML = '';
+        if (accounts.length === 0) {
+            const li = document.createElement('li');
+            li.textContent = 'No accounts yet.';
+            li.className = 'empty-message';
+            accountListElem.appendChild(li);
+            return;
+        }
+        accounts.forEach(addr => {
+            const li = document.createElement('li');
+            li.textContent = addr;
+            li.className = 'account-item' + (addr === selectedAccount ? ' selected' : '');
+            li.title = 'Click to select this account';
+            li.onclick = () => selectAccount(addr);
+            accountListElem.appendChild(li);
+        });
     }
-    function clearStorageItems() {
-        storageItems = {};
+    function setCurrentAccount(addr) {
+        selectedAccount = addr;
+        renderAccountList();
         renderStorageList();
-        updateTrieBtn.disabled = true;
+        clearTrieVisualization();
+        if (addr) {
+            fetchAndShowTrie(addr);
+        }
     }
     function renderStorageList() {
         storageList.innerHTML = '';
-        const keys = Object.keys(storageItems);
-        if (keys.length === 0) {
-            const emptyMsg = document.createElement('div');
-            emptyMsg.textContent = 'No storage items. Add some key-value pairs.';
-            emptyMsg.className = 'empty-message';
-            storageList.appendChild(emptyMsg);
+        if (!selectedAccount) {
+            storageList.innerHTML = '<div class="empty-message">Select an account first.</div>';
+            updateTrieBtn.disabled = true;
             return;
         }
-        for (const key of keys) {
-            const value = storageItems[key];
+        const items = pendingStorage[selectedAccount] || {};
+        const keys = Object.keys(items);
+        if (keys.length === 0) {
+            storageList.innerHTML = '<div class="empty-message">No pending storage. Add key-value pairs.</div>';
+            updateTrieBtn.disabled = true;
+            return;
+        }
+        keys.forEach(key => {
+            const value = items[key];
             const item = document.createElement('div');
             item.className = 'storage-item';
             const keyElem = document.createElement('div');
@@ -71,54 +100,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const removeBtn = document.createElement('button');
             removeBtn.textContent = 'Remove';
             removeBtn.onclick = () => {
-                delete storageItems[key];
+                delete pendingStorage[selectedAccount][key];
                 renderStorageList();
-                if (Object.keys(storageItems).length === 0) updateTrieBtn.disabled = true;
             };
             item.appendChild(keyElem);
             item.appendChild(valueElem);
             item.appendChild(removeBtn);
             storageList.appendChild(item);
-        }
+        });
+        updateTrieBtn.disabled = false;
     }
     function switchView(view) {
-        currentView = view;
-        if (view === 'text') {
-            textViewBtn.classList.add('active');
-            treeViewBtn.classList.remove('active');
-            textView.classList.add('active');
-            treeView.classList.remove('active');
-        } else {
-            textViewBtn.classList.remove('active');
-            treeViewBtn.classList.add('active');
-            textView.classList.remove('active');
-            treeView.classList.add('active');
+        trieVisualizer.switchView(view);
+    }
+    function formatTrieTextHierarchy(textData) {
+        // Try to pretty-print the hierarchy from textData (if it's JSON or a string tree)
+        if (!textData) return 'No trie data available.';
+        // If it's JSON, pretty print; if it's a string, try to preserve indentation
+        try {
+            const obj = typeof textData === 'string' ? JSON.parse(textData) : textData;
+            return JSON.stringify(obj, null, 2);
+        } catch {
+            // fallback: preserve whitespace/indentation
+            return textData.replace(/\n/g, '\n');
         }
     }
     function updateTrieVisualization(trie) {
-        if (!trie) {
-            setError('No trie data in response.');
-            rootHashElem.textContent = '-';
-            trieText.textContent = 'No trie data available.';
-            trieDiagram.innerHTML = '';
-            return;
-        }
-        rootHashElem.textContent = trie.rootHash || '-';
-        if (trie.textData) {
-            trieText.textContent = trie.textData;
-        } else {
-            trieText.textContent = 'No trie data available.';
-        }
-        if (trie.trieData) {
-            try {
-                const trieData = typeof trie.trieData === 'string' ? JSON.parse(trie.trieData) : trie.trieData;
-                renderTreeDiagram(trieData);
-            } catch (e) {
-                trieDiagram.innerHTML = '<div class="error">Error rendering tree diagram</div>';
-            }
-        } else {
-            trieDiagram.innerHTML = '<div class="empty">No tree data available</div>';
-        }
+        trieVisualizer.updateVisualization(trie);
     }
     function renderTreeDiagram(data) {
         trieDiagram.innerHTML = '';
@@ -126,21 +134,158 @@ document.addEventListener('DOMContentLoaded', () => {
             trieDiagram.textContent = 'No tree data available';
             return;
         }
-        function renderNode(node, depth = 0) {
-            const div = document.createElement('div');
-            div.style.marginLeft = (depth * 20) + 'px';
-            div.textContent = `[${node.type}]` + (node.key ? ` Key:${node.key}` : '') + (node.value ? ` Value:${node.value}` : '') + (node.hash ? ` Hash:${node.hash}` : '');
-            trieDiagram.appendChild(div);
-            if (node.children) {
-                for (const child of node.children) renderNode(child, depth + 1);
+        // --- New MPT visual layout ---
+        function renderNode(node, isRoot = false) {
+            if (node.type === 'branch') {
+                // Branch node: horizontal row of 16 slots (0-f)
+                const branchBox = document.createElement('div');
+                branchBox.className = 'mpt-node mpt-branch';
+                branchBox.style.display = 'flex';
+                branchBox.style.flexDirection = 'column';
+                branchBox.style.alignItems = 'center';
+                branchBox.style.margin = '24px auto';
+                // Root label
+                if (isRoot) {
+                    const rootLabel = document.createElement('div');
+                    rootLabel.className = 'mpt-label';
+                    rootLabel.innerHTML = `<b>root</b>`;
+                    branchBox.appendChild(rootLabel);
+                } else {
+                    const label = document.createElement('div');
+                    label.className = 'mpt-label';
+                    label.innerHTML = `<b>BranchNode</b>`;
+                    branchBox.appendChild(label);
+                }
+                // Hash
+                if (node.hash) {
+                    const hashDiv = document.createElement('div');
+                    hashDiv.className = 'mpt-hash';
+                    hashDiv.innerHTML = `<span class='mpt-label-hash'>Hash:</span> ${node.hash}`;
+                    branchBox.appendChild(hashDiv);
+                }
+                // 0-f row
+                const row = document.createElement('div');
+                row.className = 'mpt-branch-row';
+                row.style.display = 'flex';
+                row.style.justifyContent = 'center';
+                row.style.margin = '12px 0 0 0';
+                for (let i = 0; i < 16; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'mpt-branch-slot';
+                    slot.textContent = i.toString(16);
+                    slot.style.position = 'relative';
+                    slot.style.width = '28px';
+                    slot.style.height = '28px';
+                    slot.style.display = 'flex';
+                    slot.style.alignItems = 'center';
+                    slot.style.justifyContent = 'center';
+                    slot.style.margin = '0 2px';
+                    slot.style.border = '1.5px solid #b2bec3';
+                    slot.style.background = '#f8fafd';
+                    slot.style.fontFamily = 'monospace';
+                    slot.style.fontWeight = 'bold';
+                    // If child exists, render connector and child node
+                    if (node.children && node.children[i]) {
+                        slot.style.background = '#e3fcec';
+                        // Connector
+                        const connector = document.createElement('div');
+                        connector.className = 'mpt-branch-connector';
+                        connector.style.position = 'absolute';
+                        connector.style.left = '50%';
+                        connector.style.top = '100%';
+                        connector.style.width = '2px';
+                        connector.style.height = '18px';
+                        connector.style.background = '#27ae60';
+                        connector.style.transform = 'translateX(-50%)';
+                        slot.appendChild(connector);
+                    }
+                    row.appendChild(slot);
+                }
+                branchBox.appendChild(row);
+                // Children row (below)
+                const childrenRow = document.createElement('div');
+                childrenRow.className = 'mpt-branch-children-row';
+                childrenRow.style.display = 'flex';
+                childrenRow.style.justifyContent = 'center';
+                childrenRow.style.marginTop = '18px';
+                for (let i = 0; i < 16; i++) {
+                    if (node.children && node.children[i]) {
+                        const childBox = renderNode(node.children[i], false);
+                        childBox.style.margin = '0 2px';
+                        childrenRow.appendChild(childBox);
+                    } else {
+                        // Empty slot for alignment
+                        const empty = document.createElement('div');
+                        empty.style.width = '28px';
+                        empty.style.height = '1px';
+                        empty.style.margin = '0 2px';
+                        childrenRow.appendChild(empty);
+                    }
+                }
+                branchBox.appendChild(childrenRow);
+                return branchBox;
+            } else if (node.type === 'leaf' || node.type === 'short') {
+                // Leaf/short node: colored box with key/value/hash
+                const leafBox = document.createElement('div');
+                leafBox.className = 'mpt-node mpt-' + node.type;
+                leafBox.style.display = 'flex';
+                leafBox.style.flexDirection = 'column';
+                leafBox.style.alignItems = 'center';
+                leafBox.style.margin = '24px auto';
+                const label = document.createElement('div');
+                label.className = 'mpt-label';
+                label.innerHTML = `<b>${node.type === 'leaf' ? 'LeafNode' : 'ShortNode'}</b>`;
+                leafBox.appendChild(label);
+                if (node.key) {
+                    const keyDiv = document.createElement('div');
+                    keyDiv.className = 'mpt-key';
+                    keyDiv.innerHTML = `<span class='mpt-label-key'>Key:</span> ${node.key}`;
+                    leafBox.appendChild(keyDiv);
+                }
+                if (node.value) {
+                    const valueDiv = document.createElement('div');
+                    valueDiv.className = 'mpt-value';
+                    valueDiv.innerHTML = `<span class='mpt-label-value'>Value:</span> ${node.value}`;
+                    leafBox.appendChild(valueDiv);
+                }
+                if (node.hash) {
+                    const hashDiv = document.createElement('div');
+                    hashDiv.className = 'mpt-hash';
+                    hashDiv.innerHTML = `<span class='mpt-label-hash'>Hash:</span> ${node.hash}`;
+                    leafBox.appendChild(hashDiv);
+                }
+                return leafBox;
+            } else {
+                // Unknown node type fallback
+                const box = document.createElement('div');
+                box.className = 'mpt-node';
+                box.textContent = node.type || 'Unknown node';
+                return box;
             }
         }
-        renderNode(data, 0);
+        // Center the root node
+        const rootWrapper = document.createElement('div');
+        rootWrapper.style.display = 'flex';
+        rootWrapper.style.justifyContent = 'center';
+        rootWrapper.appendChild(renderNode(data, true));
+        trieDiagram.appendChild(rootWrapper);
     }
     function clearTrieVisualization() {
-        rootHashElem.textContent = '-';
-        trieText.textContent = 'No trie data available.';
-        trieDiagram.innerHTML = '';
+        trieVisualizer.updateVisualization({});
+    }
+    async function fetchAndShowTrie(addr) {
+        try {
+            const data = await apiCall('/api/account/get', { address: addr });
+            if (data && data.trie) {
+                updateTrieVisualization(data.trie);
+            } else {
+                setError('No trie data in response.');
+                clearTrieVisualization();
+            }
+        } catch (e) {
+            // error already shown
+            clearTrieVisualization();
+        }
     }
 
     // --- API Helpers ---
@@ -148,7 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoading(true);
         setError('');
         try {
-            console.log('API CALL', url, body);
             const res = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -156,13 +300,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             setLoading(false);
-            console.log('API RESPONSE', url, data);
             if (!res.ok || data.error) throw new Error(data.error || 'API error');
             return data;
         } catch (e) {
             setLoading(false);
             setError(e.message || 'API error');
-            console.error('API ERROR', url, e);
             throw e;
         }
     }
@@ -175,68 +317,100 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const paddedAddr = '0x' + addr.slice(2).padStart(40, '0');
-        setCurrentAccount(paddedAddr);
-        try {
-            console.log('Creating/loading account:', paddedAddr);
-            const data = await apiCall('/api/account/create', { address: paddedAddr });
-            clearStorageItems();
-            if (data && data.trie) {
-                updateTrieVisualization(data.trie);
-            } else {
-                setError('No trie data in response.');
-                clearTrieVisualization();
-            }
-        } catch (e) {
-            // Show error, but keep the selected account in the UI
-            // clearTrieVisualization();
+        if (!accounts.includes(paddedAddr)) {
+            accounts.push(paddedAddr);
         }
+        if (!pendingStorage[paddedAddr]) {
+            pendingStorage[paddedAddr] = {};
+        }
+        setCurrentAccount(paddedAddr);
+        addressInput.value = '';
     };
-
+    function selectAccount(addr) {
+        setCurrentAccount(addr);
+    }
     addStorageBtn.onclick = () => {
+        if (!selectedAccount) {
+            setError('Select an account first.');
+            return;
+        }
         const key = storageKeyInput.value.trim();
         const value = storageValueInput.value.trim();
         if (!/^0x[0-9a-fA-F]+$/.test(key) || !/^0x[0-9a-fA-F]+$/.test(value)) {
             setError('Both key and value must be valid hex strings (0x...)');
             return;
         }
-        storageItems[key] = value;
+        if (!pendingStorage[selectedAccount]) {
+            pendingStorage[selectedAccount] = {};
+        }
+        pendingStorage[selectedAccount][key] = value;
         renderStorageList();
-        updateTrieBtn.disabled = false;
         storageKeyInput.value = '';
         storageValueInput.value = '';
     };
-
     updateTrieBtn.onclick = async () => {
-        if (!currentAccount) {
+        if (!selectedAccount) {
             setError('No account selected.');
             return;
         }
-        if (Object.keys(storageItems).length === 0) {
+        const items = pendingStorage[selectedAccount] || {};
+        if (Object.keys(items).length === 0) {
             setError('Please add some storage items.');
             return;
         }
         try {
-            console.log('Updating trie for account:', currentAccount, storageItems);
-            const data = await apiCall('/api/storage/batch', { address: currentAccount, storage: storageItems });
+            // First, send the batch to update the pending state
+            await apiCall('/api/storage/batch', { address: selectedAccount, storage: items });
+            // Debug log
+            console.log("Calling /api/trie/update");
+            // Then, commit the trie and get the updated trie data
+            const data = await apiCall('/api/trie/update', { address: selectedAccount });
             if (data && data.trie) {
                 updateTrieVisualization(data.trie);
             } else {
                 setError('No trie data in response.');
                 clearTrieVisualization();
             }
-            clearStorageItems();
+            // Clear pending storage for this account after commit
+            pendingStorage[selectedAccount] = {};
+            renderStorageList();
         } catch (e) {
             // error already shown
         }
     };
-
     textViewBtn.onclick = () => switchView('text');
     treeViewBtn.onclick = () => switchView('tree');
 
+    // --- TrieVisualizer integration ---
+    const trieVisualizer = new TrieVisualizer();
+
     // --- Initial State ---
+    renderAccountList();
     setCurrentAccount(null);
-    clearStorageItems();
+    renderStorageList();
     clearTrieVisualization();
     setError('');
     setLoading(false);
+
+    // Proof functionality
+    getProofBtn.addEventListener('click', async function() {
+        const address = document.getElementById('address-input').value;
+        const key = proofKeyInput.value;
+
+        if (!address || !key) {
+            showError('Please enter both address and key');
+            return;
+        }
+
+        try {
+            showLoading();
+            const result = await ApiClient.getProof(address, key);
+            proofRootHash.textContent = result.rootHash;
+            proofValue.textContent = result.value || 'Not found';
+            hideLoading();
+        } catch (error) {
+            showError('Failed to get proof: ' + error.message);
+            hideLoading();
+        }
+    });
 });

@@ -1,3 +1,9 @@
+// This file provides utility functions for handling byte manipulations and
+// hexadecimal conversions commonly needed when working with blockchain data.
+// It includes helpers for hex-to-byte conversions with 0x prefix handling,
+// byte array copying, and other low-level byte operations essential for
+// processing Ethereum addresses, hashes, and storage values.
+
 package common
 
 import "encoding/hex"
@@ -34,4 +40,15 @@ func TrimLeftZeroes(s []byte) []byte {
 		}
 	}
 	return s[idx:]
+}
+
+// CopyBytes returns an exact copy of the provided bytes.
+func CopyBytes(b []byte) (copiedBytes []byte) {
+	if b == nil {
+		return nil
+	}
+	copiedBytes = make([]byte, len(b))
+	copy(copiedBytes, b)
+
+	return
 }

@@ -2,6 +2,14 @@ package trie
 
 import "github.com/ethereum/go-ethereum/rlp"
 
+func nodeToBytes(n node) []byte {
+	w := rlp.NewEncoderBuffer(nil)
+	n.encode(w)
+	result := w.ToBytes()
+	w.Flush()
+	return result
+}
+
 func (n *fullNode) encode(w rlp.EncoderBuffer) {
 	offset := w.List()
 	for _, c := range n.Children {

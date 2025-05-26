@@ -70,3 +70,17 @@ func prefixLen(a, b []byte) int {
 func hasTerm(s []byte) bool {
 	return len(s) > 0 && s[len(s)-1] == 16
 }
+
+func compactToHex(compact []byte) []byte {
+	if len(compact) == 0 {
+		return compact
+	}
+	base := keybytesToHex(compact)
+	// delete terminator flag
+	if base[0] < 2 {
+		base = base[:len(base)-1]
+	}
+	// apply odd flag
+	chop := 2 - base[0]&1
+	return base[chop:]
+}
