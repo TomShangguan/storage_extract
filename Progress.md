@@ -161,3 +161,35 @@
    - Add proof verification system
    - Create proof visualization interface
    - Implement proof API endpoints
+
+---
+
+## 2025/5/24 - 26 Progress
+
+### Newly Implemented Components
+1. Frontend Improvements
+   - Enhanced MPT Visualization:
+     - Improved Text View and Tree View for better clarity
+     - Added support for displaying Original Key alongside hashed keys
+     - Fixed node type identification and presentation
+   - Added support for multiple addresses
+
+2. Backend Enhancements
+   - Proof Service API:
+     - Implemented Merkle proof generation and verification
+     - Added API endpoints for proof operations
+     - Integrated proof service with state management
+
+3. Bug Fixes
+   - Corrected node type display in visualization
+   - Fixed key mapping for branch nodes and their children
+
+### TODOs
+1. Fix Proof Service frontend integration:
+   - Complete frontend components for proof
+   - Add user interface for proof verification
+   - Implement proof request and display workflow
+
+2. Further enhance MPT information display:
+   - Add more context to node display
+   - Improve visual hierarchy of trie components
