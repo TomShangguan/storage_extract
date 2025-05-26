@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ethereum MPT Storage Visualizer</title>
+    <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="./css/trie-visualizer.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ethereum MPT Storage Visualizer</h1>
+        </header>
+        <main class="main-content">
+            <section class="left-panel">
+                <div class="account-section">
+                    <h2>Accounts</h2>
+                    <div class="input-group">
+                        <input type="text" id="address-input" placeholder="Enter Ethereum address (0x...)" autocomplete="off">
+                        <button id="create-account-btn">Create/Load Account</button>
+                    </div>
+                    <ul id="account-list" class="account-list"></ul>
+                </div>
+                <div class="storage-section">
+                    <h2>Storage Key-Value Pairs</h2>
+                    <div class="input-group">
+                        <input type="text" id="storage-key" placeholder="Key (0x...)" autocomplete="off">
+                        <input type="text" id="storage-value" placeholder="Value (0x...)" autocomplete="off">
+                        <button id="add-storage-btn">Add</button>
+                    </div>
+                    <div id="storage-list" class="storage-list"></div>
+                    <button id="update-trie-btn" disabled>Update Trie</button>
+                </div>
+                <div class="proof-section">
+                    <h2>Merkle Proof</h2>
+                    <div class="input-group">
+                        <input type="text" id="proof-key" placeholder="Key to prove (0x...)" autocomplete="off">
+                        <button id="get-proof-btn">Get Proof</button>
+                    </div>
+                    <div id="proof-result" class="proof-result">
+                        <div>Root Hash: <span id="proof-root-hash">-</span></div>
+                        <div>Value: <span id="proof-value">-</span></div>
+                    </div>
+                </div>
+            </section>
+            <section class="right-panel">
+                <div class="trie-section">
+                    <h2>Merkle Patricia Trie Visualization</h2>
+                    <div class="trie-info">
+                        <div>Root Hash: <span id="root-hash">-</span></div>
+                    </div>
+                    <div class="view-controls">
+                        <button id="text-view-btn" class="active">Text View</button>
+                        <button id="tree-view-btn">Tree View</button>
+                    </div>
+                    <div class="trie-visualization">
+                        <div id="text-view" class="view-content active">
+                            <pre id="trie-text">No trie data available. Create or load an account.</pre>
+                        </div>
+                        <div id="tree-view" class="view-content">
+                            <div id="trie-diagram"></div>
+                        </div>
+                    </div>
+                    <div id="error-message" class="error-message" style="display:none;"></div>
+                    <div id="loading-message" class="loading-message" style="display:none;">Loading...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="./js/api-client.js"></script>
+    <script src="./js/trie-visualizer.js"></script>
+    <script src="./js/main.js"></script>
+</body>
+</html>
