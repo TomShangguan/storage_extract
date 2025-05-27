@@ -60,6 +60,11 @@ The web interface provides the following functionalities:
     *   **Text View**: Displays a raw, hierarchical text dump of the current trie structure. This is useful for a quick overview and debugging.
     *   **Tree View**: Renders an interactive, graphical representation of the MPT. Nodes are color-coded or shaped by type (branch, extension, leaf).
 
+
+## Note on GitHub Pages Version
+
+The GitHub Pages hosted version of this application is primarily for demonstration purposes and offers limited functionality compared to the full local version. Since GitHub Pages only serves static content (HTML, CSS, JavaScript), it lacks the backend Go server required for API endpoints and state management. When using the GitHub Pages demo, features that require server-side processing (such as updating tries, generating Merkle proofs, or performing state transitions) will result in error messages like `405 (Method Not Allowed)`. To experience the complete functionality of the Ethereum Storage Visualizer, including interactive MPT operations and proof generation, it's better to run the application locally using the steps described in the "How to Run" section above. This allows both the frontend and backend components to work together seamlessly.
+
 ## Project Structure
 
 ```
