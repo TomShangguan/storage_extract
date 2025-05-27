@@ -10,8 +10,6 @@
 
 ## How to Run
 
-### 1. Local Development Server
-
 This is the default mode and starts a web server to interact with the visualizer.
 
 ```bash
@@ -29,12 +27,6 @@ go run main.go -port=8888
 ./storage_extract -port=8888
 ```
 Once the server is running, open your web browser and navigate to `http://localhost:<port>` (e.g., `http://localhost:8080`).
-
-### 2. GitHub Pages (Demo)
-
-A live demo is available at: [https://tomshangguan.github.io/storage_extract/](https://tomshangguan.github.io/storage_extract/)
-
-> **Note:** The GitHub Pages version may not always reflect the latest features from the main branch. The Merkle Proof functionality is currently under development and not operational in the demo version.
 
 ## Using the Web Interface
 
