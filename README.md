@@ -8,6 +8,27 @@
     - **Tree View**: An interactive graphical representation of the MPT, clearly showing branch, extension, and leaf nodes, along with their relationships.
 - **Multiple Address Support**: Visualize and manage MPTs for multiple Ethereum addresses.
 
+## Setup and Installation
+
+1.  **Prerequisites**:
+    *   Go (version 1.23 or later is recommended). You can download it from [golang.org](https://golang.org/dl/).
+
+2.  **Clone the Repository (if applicable)**:
+    ```bash
+    git clone <repository-url> # Replace <repository-url> with the actual URL
+    cd storage_extract
+    ```
+    If you already have the project files, navigate to the project root directory:
+    ```bash
+    cd .../storage_extract # Replace ... with your directory path
+    ```
+
+3.  **Download Dependencies**:
+    This command will analyze your `go.mod` file and download any missing dependencies.
+    ```bash
+    go mod tidy
+    ```
+
 ## How to Run
 
 This is the default mode and starts a web server to interact with the visualizer.
@@ -90,26 +111,7 @@ The web interface provides the following functionalities:
     -   `trienode/` (sub-directory):
         -   `proof.go`: Defines `ProofSet`, a simple in-memory key-value store that implements the `ethdb.KeyValueWriter` and `ethdb.KeyValueReader` interfaces. This is used by the `Prove` and `VerifyProof` functions to temporarily store and retrieve the nodes that form a Merkle proof.
 
-## Setup and Installation
 
-1.  **Prerequisites**:
-    *   Go (version 1.23 or later is recommended). You can download it from [golang.org](https://golang.org/dl/).
-
-2.  **Clone the Repository (if applicable)**:
-    ```bash
-    git clone <repository-url> # Replace <repository-url> with the actual URL
-    cd storage_extract
-    ```
-    If you already have the project files, navigate to the project root directory:
-    ```bash
-    cd .../storage_extract # Replace ... with your directory path
-    ```
-
-3.  **Download Dependencies**:
-    This command will analyze your `go.mod` file and download any missing dependencies.
-    ```bash
-    go mod tidy
-    ```
 ## Future Enhancements (TODOs)
 
 -   **Complete Frontend for Proof Service**:
