@@ -6,7 +6,6 @@
 - **MPT Visualization**:
     - **Text View**: A hierarchical text representation of the Merkle Patricia Trie (MPT).
     - **Tree View**: An interactive graphical representation of the MPT, clearly showing branch, extension, and leaf nodes, along with their relationships.
-    - Displays original (pre-image) keys alongside their hashed counterparts for enhanced clarity and easier debugging.
 - **Multiple Address Support**: Visualize and manage MPTs for multiple Ethereum addresses.
 
 ## How to Run
@@ -32,7 +31,6 @@ go run main.go -port=8888
 Once the server is running, open your web browser and navigate to `http://localhost:<port>` (e.g., `http://localhost:8080`).
 
 ### 2. GitHub Pages (Demo)
-### 2. GitHub Pages (Demo)
 
 A live demo is available at: [https://tomshangguan.github.io/storage_extract/](https://tomshangguan.github.io/storage_extract/)
 
@@ -47,7 +45,7 @@ The web interface provides the following functionalities:
 3.  **Update Trie**: After setting or modifying storage key-value pairs, click the "Update Trie" button. This action commits the changes to the in-memory trie and refreshes the MPT visualization (both Text and Tree views).
 4.  **View MPT**:
     *   **Text View**: Displays a raw, hierarchical text dump of the current trie structure. This is useful for a quick overview and debugging.
-    *   **Tree View**: Renders an interactive, graphical representation of the MPT. Nodes are color-coded or shaped by type (branch, extension, leaf), and you can often click on nodes to inspect their details (like partial paths, values, or child hashes).
+    *   **Tree View**: Renders an interactive, graphical representation of the MPT. Nodes are color-coded or shaped by type (branch, extension, leaf).
 
 ## Project Structure
 
