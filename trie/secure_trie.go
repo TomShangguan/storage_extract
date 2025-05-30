@@ -1,6 +1,7 @@
 package trie
 
 import (
+	"fmt"
 	"storage_extract/common"
 
 	"github.com/ethereum/go-ethereum/rlp"
@@ -50,7 +51,7 @@ func NewStateTrie(id *ID) (*StateTrie, error) {
 func (t *StateTrie) UpdateStorage(_ common.Address, key, value []byte) error {
 	hk := t.hashKey(key)
 	v, _ := rlp.EncodeToBytes(value)
-
+	fmt.Println("UpdateStorage key:", hk, "value:", v)
 	err := t.trie.Update(hk, v)
 	if err != nil {
 		return err

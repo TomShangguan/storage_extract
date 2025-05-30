@@ -1,36 +1,37 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"storage_extract/common"
 	"storage_extract/state"
+	"storage_extract/trie/test"
 )
 
 func main() {
-	// Parse command line arguments
-	mode := flag.String("mode", "server", "Run mode: 'server' (web interface) or 'test' (command line test)")
-	port := flag.String("port", "8080", "Server port to use when running in server mode")
-	flag.Parse()
+	// // Parse command line arguments
+	// mode := flag.String("mode", "server", "Run mode: 'server' (web interface) or 'test' (command line test)")
+	// port := flag.String("port", "8080", "Server port to use when running in server mode")
+	// flag.Parse()
 
-	// Choose the appropriate mode
-	switch *mode {
-	case "server":
-		// Start the web server
-		fmt.Printf("Starting Ethereum Storage Visualizer on port %s...\n", *port)
-		if err := state.StartServer(*port); err != nil {
-			fmt.Printf("Server error: %v\n", err)
-		}
+	// // Choose the appropriate mode
+	// switch *mode {
+	// case "server":
+	// 	// Start the web server
+	// 	fmt.Printf("Starting Ethereum Storage Visualizer on port %s...\n", *port)
+	// 	if err := state.StartServer(*port); err != nil {
+	// 		fmt.Printf("Server error: %v\n", err)
+	// 	}
 
-	case "test":
-		// Run the command line test
-		fmt.Println("Running command line storage test...")
-		runTestMode()
+	// case "test":
+	// 	// Run the command line test
+	// 	fmt.Println("Running command line storage test...")
+	// 	runTestMode()
 
-	default:
-		fmt.Printf("Unknown mode: %s\n", *mode)
-		fmt.Println("Use -mode=server for web interface or -mode=test for command line test")
-	}
+	// default:
+	// 	fmt.Printf("Unknown mode: %s\n", *mode)
+	// 	fmt.Println("Use -mode=server for web interface or -mode=test for command line test")
+	// }
+	test.Proof_Service_Try()
 }
 
 // runTestMode executes the original test functionality

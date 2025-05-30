@@ -142,7 +142,6 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 		obj := s.stateObjects[addr]
 		workers.Go(func() error {
 			// Verkele trie updateTrie() is ignored for now as not used in the original code.
-			println("updateRoot called")
 			obj.updateRoot()
 
 			// if s.witness != nil && obj.trie != nil ... (omitted for now)
@@ -201,7 +200,6 @@ func (s *StateDB) Commit(block uint64, deleteEmptyObjects bool) (common.Hash, er
 	if err != nil {
 		return common.Hash{}, err
 	}
-	println("Commit called")
 	return common.Hash{}, nil
 }
 

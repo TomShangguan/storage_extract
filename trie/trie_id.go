@@ -1,6 +1,9 @@
 package trie
 
-import "storage_extract/common"
+import (
+	"fmt"
+	"storage_extract/common"
+)
 
 type ID struct {
 	StateRoot common.Hash // The root of the corresponding state(block.root)
@@ -11,7 +14,7 @@ type ID struct {
 // StorageTrieID constructs an identifier for storage trie which belongs to a certain
 // state and contract specified by the stateRoot and owner.
 func StorageTrieID(stateRoot common.Hash, owner common.Hash, root common.Hash) *ID {
-	println("StorageTrieID called: owner", owner.Hex())
+	fmt.Println("StorageTrieID called: owner", owner.Hex())
 	return &ID{
 		StateRoot: stateRoot,
 		Owner:     owner,

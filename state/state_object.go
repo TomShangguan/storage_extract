@@ -225,7 +225,6 @@ func (s *StateObject) updateTrie() (Trie, error) {
 func (s *StateObject) updateRoot() {
 	// Flush cached storage mutations into trie, short circuit if any error
 	// is occurred or there is no change in the trie.
-	println("updateRoot called")
 	tr, err := s.updateTrie()
 	if err != nil || tr == nil {
 		return
