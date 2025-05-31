@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"storage_extract/common"
 	"storage_extract/crypto"
 	"storage_extract/trie"
@@ -42,6 +43,7 @@ type CachingDB struct {
 func (db *CachingDB) OpenStorageTrie(stateRoot common.Hash, address common.Address, root common.Hash) (Trie, error) {
 	// Verkle trie case ignored for now
 	// TODO: Implement db.triedb paramter for the trie
+	fmt.Println("Opening storage trie for address:", (address.Bytes()), "with state root:", stateRoot.Hex(), "and root:", root.Hex())
 	tr, err := trie.NewStateTrie(trie.StorageTrieID(stateRoot, crypto.Keccak256Hash(address.Bytes()), root))
 	if err != nil {
 		return nil, err

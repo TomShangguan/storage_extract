@@ -1,0 +1,54 @@
+a1@169-231-164-198 storage_extract % go run main.go
+Storage Item #1:
+  Key: [1234 0 0 0]
+  Value: [5678 0 0 0]
+Setting storage for key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 210] Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 22 46] Origin: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+  Previous Value: 0000000000000000000000000000000000000000000000000000000000000000
+
+Storage Item #2:
+  Key: [0 0 0 0]
+  Value: [0 0 0 0]
+Setting storage for key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] Origin: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] No change detected.
+  Previous Value: 0000000000000000000000000000000000000000000000000000000000000000
+
+Storage Item #3:
+  Key: [12 0 0 0]
+  Value: [12 0 0 0]
+Setting storage for key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12] Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12] Origin: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+  Previous Value: 0000000000000000000000000000000000000000000000000000000000000000
+
+Finalising storage for key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 210] Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 22 46]
+Finalising storage for key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12] Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12]
+Opening storage trie for address: [143 91 43 126 41 157 30 162 27 73 18 164 205 19 57 251 21 125 83 98]
+Opening storage trie for address: [143 91 43 126 41 157 30 162 27 73 18 164 205 19 57 251 21 125 83 98] with state root: 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421 and root: 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
+StorageTrieID called: owner 0xc21016060ba249eef0c847c94eb764dec5c9bb77e3c9148a477cb7822e1a9452
+Updating storage for key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 210] Origin: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 22 46] Exist: true
+UpdateStorage key: [23 250 20 176 215 58 166 162 109 107 135 32 193 200 75 80 152 79 92 24 142 225 193 19 210 54 30 67 15 27 103 100] value: [130 22 46]
+Updating storage for key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12] Origin: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0] Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12] Exist: true
+UpdateStorage key: [223 105 102 201 113 5 28 61 84 236 89 22 38 6 83 20 147 165 20 4 160 2 132 47 86 0 157 126 92 244 168 199] value: [12]
+
+==== Storage Trie for Account 8f5b2b7e299d1ea21b4912a4cd1339fb157d5362 ====
+
+==== Trie Structure ====
+Owner: c21016060ba249eef0c847c94eb764dec5c9bb77e3c9148a477cb7822e1a9452
+Root Hash: 3b029251664e5167493bce0f7cf5dde2f9f068cb98094515913642c57721a358
+Uncommitted Changes: 2
+
+Hierarchy:
+└─ Branch[H,D]
+  [1] └─ Short[H,D] Key:070f0a01040b000d07030a0a060a02060d060b080702000c010c08040b05000908040f050c0108080e0e010c0101030d020306010e0403000f010b0607060410
+    └─ Value: 82162e
+  [d] └─ Short[H,D] Key:0f060906060c0907010005010c030d05040e0c05090106020600060503010409030a05010400040a0000020804020f05060000090d070e050c0f040a080c0710
+    └─ Value: 0c
+=====================
+StateDB initialized and storage items set successfully.
+Storage Item:
+  Key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4 210]
+  Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 22 46]
+Storage Item:
+  Key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+  Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
+Storage Item:
+  Key: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12]
+  Value: [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 12]
+a1@169-231-164-198 storage_extract % 

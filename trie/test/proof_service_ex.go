@@ -38,12 +38,23 @@ func Proof_Service_Try() {
 		key := kv.key
 		value := kv.value
 		fmt.Printf("Storage Item #%d:\n", i+1)
-		fmt.Printf("  Key: %x\n", key)
-		fmt.Printf("  Value: %x\n", value)
+		fmt.Printf("  Key: %v\n", key)
+		fmt.Printf("  Value: %v\n", value)
 		originalKeyValuePairs[contractAddr][key.Bytes32()] = value.Bytes32()
 		prevValue := stateDB.SetState(contractAddr, key.Bytes32(), value.Bytes32())
 		fmt.Printf("  Previous Value: %x\n\n", prevValue)
 	}
 	stateDB.Commit(0, false)
+	fmt.Println("StateDB initialized and storage items set successfully.")
+	obj := stateDB.GetStateObject(contractAddr)
+	for _, kv := range testStorage {
+		key := kv.key
+		value := obj.GetState(key.Bytes32())
+		fmt.Printf("Storage Item:\n")
+		fmt.Printf("  Key: %v\n", key.Hex())
+		fmt.Printf("  Value: %v\n", value.Hex())
+	}
+
+	fmt.Println("Proof Service Test")
 
 }

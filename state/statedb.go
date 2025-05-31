@@ -50,6 +50,7 @@ func New(root common.Hash, db Database) (*StateDB, error) {
 		stateObjects: make(map[common.Address]*StateObject),
 		journal:      newJournal(),
 		mutations:    make(map[common.Address]*mutation),
+		originalRoot: root,
 	}
 	return sdb, nil
 }
@@ -211,4 +212,12 @@ func (s *StateDB) markUpdate(addr common.Address) {
 	}
 	s.mutations[addr].applied = false
 	s.mutations[addr].typ = update
+}
+
+//------------------------------------------------------------------------------------------------------------------------
+// Below are the additional methods that are not part of the original code but used in the test code snippet.
+
+// GetStateObject retrieves the state object for the given address.
+func (s *StateDB) GetStateObject(addr common.Address) *StateObject {
+	return s.getStateObject(addr)
 }

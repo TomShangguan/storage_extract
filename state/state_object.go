@@ -64,6 +64,7 @@ func newObject(db *StateDB, addr common.Address, acct *types.StateAccount) *Stat
 // Original function: github.com/ethereum/go-ethereum/core/state/state_object.go line 124
 func (s *StateObject) getTrie() (Trie, error) {
 	if s.trie == nil {
+		fmt.Println("Opening storage trie for address:", s.address)
 		tr, err := s.db.db.OpenStorageTrie(s.db.originalRoot, s.address, s.data.Root)
 		if err != nil {
 			return nil, err
@@ -116,6 +117,7 @@ func (s *StateObject) SetState(key, value common.Hash) common.Hash {
 	// dirty changes, supporting reverting all of it back to no change.
 	prev, origin := s.getState(key)
 	if prev == value {
+		fmt.Println("Setting storage for key:", key, "Value:", value, "Origin:", origin, "No change detected.")
 		return prev
 	}
 	s.db.journal.storageChange(s.address, key, prev, origin)
@@ -129,9 +131,11 @@ func (s *StateObject) SetState(key, value common.Hash) common.Hash {
 func (s *StateObject) setState(key common.Hash, value common.Hash, origin common.Hash) {
 	// Storage slot is set back to its original value, undo the dirty marker
 	if value == origin {
+		fmt.Println("Setting storage for key:", key, "Value:", value, "Origin:", origin)
 		delete(s.dirtyStorage, key)
 		return
 	}
+	fmt.Println("Setting storage for key:", key, "Value:", value, "Origin:", origin)
 	s.dirtyStorage[key] = value
 }
 
@@ -144,6 +148,7 @@ func (s *StateObject) finalise() {
 		if origin, exist := s.uncommittedStorage[key]; exist && origin == value {
 			// The slot is reverted to its original value, delete the entry
 			// to avoid thrashing the data structures.
+			fmt.Println("Reverting storage for key:", key, "Value:", value, "Origin:", origin)
 			delete(s.uncommittedStorage, key)
 		} else if exist {
 			// The slot is modified to another value and the slot has been
@@ -160,6 +165,7 @@ func (s *StateObject) finalise() {
 		// modified back in tx_b). We can't blindly remove it from pending
 		// map as the dirty slot might have been committed already
 		// and entry is necessary to modify the value back.
+		fmt.Println("Finalising storage for key:", key, "Value:", value)
 		s.pendingStorage[key] = value
 
 	}
@@ -201,6 +207,7 @@ func (s *StateObject) updateTrie() (Trie, error) {
 	// The process of checking whether the value is same as the original value is ignored for now.
 	for key, origin := range s.uncommittedStorage {
 		value, exist := s.pendingStorage[key]
+		fmt.Println("Updating storage for key:", key, "Origin:", origin, "Value:", value, "Exist:", exist)
 		if value == origin {
 			continue
 		}

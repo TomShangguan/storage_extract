@@ -43,11 +43,10 @@ func NewKeccakState() KeccakState {
 // Keccak256 calculates and returns the Keccak256 hash of the input data.
 // Original function: crypto/crypto.go line 84
 func Keccak256Hash(data ...[]byte) (h common.Hash) {
-	b := make([]byte, 32)
 	d := NewKeccakState()
 	for _, b := range data {
 		d.Write(b)
 	}
-	d.Read(b)
+	d.Read(h[:])
 	return h
 }

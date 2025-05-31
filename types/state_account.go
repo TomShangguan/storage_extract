@@ -9,6 +9,6 @@ type StateAccount struct {
 // NewEmptyStateAccount creates a new empty state account with a zero root hash.
 func NewEmptyStateAccount() *StateAccount {
 	return &StateAccount{
-		Root: common.Hash{},
+		Root: EmptyRootHash,
 	}
 }
