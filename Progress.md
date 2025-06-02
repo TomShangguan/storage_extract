@@ -193,3 +193,59 @@
 2. Further enhance MPT information display:
    - Add more context to node display
    - Improve visual hierarchy of trie components
+
+
+---
+
+## 2025/5/29 Progress
+
+### Newly Implemented Components
+1. Backend API Improvements
+   - Fixed bugs in storage value retrieval.
+   - Improved error handling across API endpoints.
+   - Enhanced storage key-value pair mapping.
+
+### TODOs
+1. Write tests to check insertion, retrieval, and proof generation.
+2. Fix issues with hashing implementation.
+
+---
+
+## 2025/5/30 Progress
+
+### Newly Implemented Components
+1. Testing Framework
+   - Implemented tests for insertion, retrieval, and proof generation.
+   - Added test coverage for edge cases.
+2. Bug Fixes
+   - Fixed a bug in the hashing implementation.
+
+### TODOs
+1. Rewrite the backend API using the Gin framework.
+2. Provide frontend components for proof service.
+
+---
+
+## 2025/5/31 Progress
+
+### Newly Implemented Components
+1. Backend API Refactoring
+   - Rewrote the backend API using Gin for better routing and middleware support.
+2. Frontend Proof Service
+   - Added UI components for proof generation and verification.
+   - Integrated proof service with backend API.
+
+### TODOs
+1. Improve the information displayed in the tree view.
+
+---
+
+## 2025/6/1 Progress
+
+## Newly Implemented Components
+1. Tree View Enhancements
+   - Improved node information display.
+   - Enhanced visual hierarchy and added tooltips.
+
+### TODOs
+1. Provide block-by-block transaction handling and tree view updates.
