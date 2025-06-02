@@ -245,3 +245,16 @@ func (s *StateObject) updateRoot() {
 	}
 	s.data.Root = tr.Hash()
 }
+
+//------------------------------------------------------------------------------------------------------------------------
+// Below are the additional methods that are not part of the original code but used in the test code snippet.
+
+// GetAddress returns the address of the state object.
+func (s *StateObject) GetTrie() *Trie {
+	return &s.trie
+}
+
+// GetAddress returns the address of the state object.
+func (s *StateObject) GetRoot() common.Hash {
+	return s.data.Root
+}

@@ -1,6 +1,7 @@
 package trie
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -12,6 +13,7 @@ type TrieNode struct {
 	Key             string          `json:"key,omitempty"`
 	OriginalKey     string          `json:"originalKey,omitempty"` // Before hashing
 	Value           string          `json:"value,omitempty"`
+	OriginalValue   string          `json:"originalValue,omitempty"` // Before hashing/encoding
 	Hash            string          `json:"hash,omitempty"`
 	BranchIndex     int             `json:"branchIndex,omitempty"` // For branch children
 	Children        []*TrieNode     `json:"children,omitempty"`
@@ -60,23 +62,33 @@ func (t *Trie) PrintTrieToFormattedWithKeys(w *strings.Builder, originalKeys map
 
 // ConvertToJSON convert the trie to JSON format
 func (t *Trie) ConvertToJSON() ([]byte, error) {
-	rootNode := convertNodeToTrieNode(t.root, 0, -1, nil)
+	rootNode := convertNodeToTrieNode(t.root, 0, -1, nil, nil)
 	return json.Marshal(rootNode)
 }
 
-// ConvertToJSONWithOriginalKeys convert the trie to JSON format with original keys
-func (t *Trie) ConvertToJSONWithOriginalKeys(originalKeys map[string]string) ([]byte, error) {
-	rootNode := convertNodeToTrieNode(t.root, 0, -1, originalKeys)
+// ConvertToJSONWithOriginalKeys convert the trie to JSON format with original keys and values
+func (t *Trie) ConvertToJSONWithOriginalKeys(originalKeys map[string]string, originalValues map[string]string) ([]byte, error) {
+	rootNode := convertNodeToTrieNode(t.root, 0, -1, originalKeys, originalValues)
 	return json.Marshal(rootNode)
 }
 
 // convertNodeToTrieNode convert the internal node to a frontend-friendly TrieNode structure
-func convertNodeToTrieNode(n node, depth int, branchIndex int, originalKeys map[string]string) *TrieNode {
-	return convertNodeToTrieNodeWithPath(n, depth, branchIndex, originalKeys, "")
+func convertNodeToTrieNode(n node, depth int, branchIndex int, originalKeys map[string]string, originalValues map[string]string) *TrieNode {
+	return convertNodeToTrieNodeWithPath(n, depth, branchIndex, originalKeys, originalValues, "")
+}
+
+// hexToNibbles converts a hex-encoded byte array to nibble array (each nibble becomes a byte)
+func hexToNibbles(hexBytes []byte) []byte {
+	nibbles := make([]byte, len(hexBytes)*2)
+	for i, b := range hexBytes {
+		nibbles[i*2] = b >> 4     // High nibble
+		nibbles[i*2+1] = b & 0x0F // Low nibble
+	}
+	return nibbles
 }
 
 // convertNodeToTrieNodeWithPath recursive convert the node to a frontend-friendly TrieNode structure, and track the full path
-func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalKeys map[string]string, currentPath string) *TrieNode {
+func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalKeys map[string]string, originalValues map[string]string, currentPath string) *TrieNode {
 	if n == nil {
 		return nil
 	}
@@ -94,6 +106,51 @@ func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalK
 			BranchIndex: branchIndex,
 		}
 
+		// Check if we have original key information for this node
+		if originalKeys != nil {
+			fmt.Printf("DEBUG: Checking key %s against %d original keys\n", keyHex, len(originalKeys))
+
+			// Try different matching strategies
+			var originalKey string
+			var found bool
+
+			// Strategy 1: Direct key match
+			if originalKey, found = originalKeys[keyHex]; found {
+				fmt.Printf("DEBUG: Found original key via direct match %s -> %s\n", keyHex, originalKey)
+			} else if originalKey, found = originalKeys[fullKeyPath]; found {
+				fmt.Printf("DEBUG: Found original key via path match %s -> %s\n", fullKeyPath, originalKey)
+			} else {
+				// Strategy 2: Try to reverse the nibble encoding process
+				// The trie key might be nibble-encoded version of a hash
+				// Try to find if any original key's hash matches when nibble-encoded
+				for mapKey, mapValue := range originalKeys {
+					fmt.Printf("DEBUG: Trying to match %s with map key %s\n", keyHex, mapKey)
+
+					// Check if mapKey could be a hash that when nibble-encoded matches our key
+					if len(mapKey) == 64 { // Standard hash length
+						// Convert hash to nibbles format
+						hashBytes, err := hex.DecodeString(mapKey)
+						if err == nil {
+							nibbles := hexToNibbles(hashBytes)
+							nibblesHex := fmt.Sprintf("%x", nibbles)
+							if nibblesHex == keyHex {
+								originalKey = mapValue
+								found = true
+								fmt.Printf("DEBUG: Found match via nibble encoding: %s -> %s\n", keyHex, originalKey)
+								break
+							}
+						}
+					}
+				}
+			}
+
+			if found {
+				node.OriginalKey = originalKey
+			} else {
+				fmt.Printf("DEBUG: No original key found for %s or %s\n", keyHex, fullKeyPath)
+			}
+		}
+
 		// For root short nodes, make sure we emphasize that it's a root
 		if depth == 0 {
 			node.Type = "root_short" // Special type for styling in frontend
@@ -105,10 +162,51 @@ func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalK
 			node.Type = "shortNode_value"
 			node.Value = fmt.Sprintf("%02x", valueNode)
 			node.IsLeaf = true // Keep this for backwards compatibility
+
+			// Try to find original value from the mapping
+			if originalValues != nil {
+				fmt.Printf("DEBUG: Checking value %s against %d original values\n", node.Value, len(originalValues))
+
+				// Try different value format strategies
+				var originalValue string
+				var valueFound bool
+
+				// Strategy 1: Direct value match (padded with 0x)
+				if originalValue, valueFound = originalValues["0x"+node.Value]; valueFound {
+					fmt.Printf("DEBUG: Found original value via 0x-prefixed match %s -> %s\n", node.Value, originalValue)
+				} else if originalValue, valueFound = originalValues[node.Value]; valueFound {
+					fmt.Printf("DEBUG: Found original value via direct match %s -> %s\n", node.Value, originalValue)
+				} else {
+					// Strategy 2: Try trimmed version (remove leading zeros)
+					trimmedValue := strings.TrimLeft(node.Value, "0")
+					if trimmedValue == "" {
+						trimmedValue = "0"
+					}
+					if originalValue, valueFound = originalValues[trimmedValue]; valueFound {
+						fmt.Printf("DEBUG: Found original value via trimmed match %s -> %s\n", trimmedValue, originalValue)
+					} else if originalValue, valueFound = originalValues["0x"+trimmedValue]; valueFound {
+						fmt.Printf("DEBUG: Found original value via 0x-trimmed match %s -> %s\n", trimmedValue, originalValue)
+					} else {
+						// Strategy 3: Try padded version (add leading zeros to make it 64 chars)
+						paddedValue := fmt.Sprintf("%064s", node.Value)
+						if originalValue, valueFound = originalValues[paddedValue]; valueFound {
+							fmt.Printf("DEBUG: Found original value via padded match %s -> %s\n", paddedValue, originalValue)
+						} else if originalValue, valueFound = originalValues["0x"+paddedValue]; valueFound {
+							fmt.Printf("DEBUG: Found original value via 0x-padded match %s -> %s\n", paddedValue, originalValue)
+						}
+					}
+				}
+
+				if valueFound {
+					node.OriginalValue = originalValue
+				} else {
+					fmt.Printf("DEBUG: No original value found for %s\n", node.Value)
+				}
+			}
 		} else {
 			// This is a shortNode with another node (an extension node)
 			node.Type = "shortNode_extension"
-			childNode := convertNodeToTrieNodeWithPath(n.Val, depth+1, -1, originalKeys, fullKeyPath)
+			childNode := convertNodeToTrieNodeWithPath(n.Val, depth+1, -1, originalKeys, originalValues, fullKeyPath)
 			if childNode != nil {
 				node.Children = []*TrieNode{childNode}
 			}
@@ -136,7 +234,7 @@ func convertNodeToTrieNodeWithPath(n node, depth int, branchIndex int, originalK
 			if child != nil {
 				childPath := fmt.Sprintf("%s%x", currentPath, i)
 				branchNode.SlotMap[fmt.Sprintf("%x", i)] = true
-				branchNode.Children = append(branchNode.Children, convertNodeToTrieNodeWithPath(child, depth+1, i, originalKeys, childPath))
+				branchNode.Children = append(branchNode.Children, convertNodeToTrieNodeWithPath(child, depth+1, i, originalKeys, originalValues, childPath))
 			} else {
 				branchNode.SlotMap[fmt.Sprintf("%x", i)] = false
 			}
@@ -395,6 +493,6 @@ func (t *StateTrie) PrintTrieToFormattedWithKeys(w *strings.Builder, originalKey
 }
 
 // ConvertToJSONWithOriginalKeys delegates to the underlying trie's method
-func (t *StateTrie) ConvertToJSONWithOriginalKeys(originalKeys map[string]string) ([]byte, error) {
-	return t.trie.ConvertToJSONWithOriginalKeys(originalKeys)
+func (t *StateTrie) ConvertToJSONWithOriginalKeys(originalKeys map[string]string, originalValues map[string]string) ([]byte, error) {
+	return t.trie.ConvertToJSONWithOriginalKeys(originalKeys, originalValues)
 }

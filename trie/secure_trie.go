@@ -84,3 +84,10 @@ func (t *StateTrie) hashKey(key []byte) []byte {
 func (t *StateTrie) PrintTrie() {
 	t.trie.PrintTrie()
 }
+
+//------------------------------------------------------------------------------------------------------------------------
+// Below are the additional methods that are not part of the original code but used in the test code snippet.
+
+func (t *StateTrie) HashKey(key []byte) []byte {
+	return t.hashKey(key)
+}

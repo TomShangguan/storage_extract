@@ -33,6 +33,7 @@ func (t *Trie) Prove(key []byte, proofDb ethdb.KeyValueWriter) error {
 		case *shortNode:
 			if len(key) < len(n.Key) || !bytes.Equal(n.Key, key[:len(n.Key)]) {
 				// The trie doesn't contain the key.
+				fmt.Println("Key not found in short node:", key)
 				tn = nil
 			} else {
 				tn = n.Val
@@ -88,6 +89,7 @@ func (t *StateTrie) Prove(key []byte, proofDb ethdb.KeyValueWriter) error {
 // Original function: github.com/ethereum/go-ethereum/trie/proof.go line 117
 func VerifyProof(rootHash common.Hash, key []byte, proofDb ethdb.KeyValueReader) (value []byte, err error) {
 	key = keybytesToHex(key)
+	fmt.Println("VerifyProof key:", key)
 	wantHash := rootHash
 	for i := 0; ; i++ {
 		buf, _ := proofDb.Get(wantHash[:])
@@ -101,6 +103,7 @@ func VerifyProof(rootHash common.Hash, key []byte, proofDb ethdb.KeyValueReader)
 		keyrest, cld := get(n, key, true)
 		switch cld := cld.(type) {
 		case nil:
+			fmt.Println("Child node type is nil")
 			// The trie doesn't contain the key.
 			return nil, nil
 		case hashNode:
@@ -122,6 +125,7 @@ func get(tn node, key []byte, skipResolved bool) ([]byte, node) {
 	for {
 		switch n := tn.(type) {
 		case *shortNode:
+			fmt.Println("Short node found with key:", n.Key)
 			if len(key) < len(n.Key) || !bytes.Equal(n.Key, key[:len(n.Key)]) {
 				return nil, nil
 			}

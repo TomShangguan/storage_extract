@@ -219,5 +219,5 @@ func (s *StateDB) markUpdate(addr common.Address) {
 
 // GetStateObject retrieves the state object for the given address.
 func (s *StateDB) GetStateObject(addr common.Address) *StateObject {
-	return s.getStateObject(addr)
+	return s.getOrNewStateObject(addr)
 }

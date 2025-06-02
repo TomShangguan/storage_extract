@@ -45,18 +45,28 @@ class TrieVisualizer {
         // Update root hash
         this.rootHashElement.textContent = data.rootHash || '-';
         
-        // Update text view - now receives formatted text from backend
+        // Update text view - now receives formatted text from backend (without original KV pairs section)
+        let textContent = '';
+        
         if (data.textData) {
-            this.textViewElement.textContent = data.textData;
+            textContent += data.textData;
         } else {
-            this.textViewElement.textContent = 'No text data available.';
+            textContent += 'No trie structure available.';
         }
         
-        // Update tree view
+        this.textViewElement.textContent = textContent;
+        
+        // Update tree view with enhanced information
         if (data.trieData) {
             try {
                 const trieJson = JSON.parse(data.trieData);
-                this.renderTreeDiagramBoxed(trieJson); // Pass parsed JSON
+                
+                // Debug: log the data structure
+                console.log('Trie JSON structure:', trieJson);
+                console.log('Original KV pairs:', data.originalKVPairs);
+                
+                // Pass original key-value pairs to tree rendering for enhanced display
+                this.renderTreeDiagramBoxed(trieJson, data.originalKVPairs); 
             } catch (e) {
                 console.error("Failed to parse trieData JSON:", e);
                 const diagramElement = document.getElementById('trie-diagram');
@@ -114,9 +124,18 @@ class TrieVisualizer {
     /**
      * Render the tree diagram visually in a hierarchical structure similar to the text view
      * but with visual enhancements
-     * @param {Object} data - The tree data
+     * @param {Object} rootNodeData - The root node data to render.
+     * @param {Array} originalKVPairs - Original key-value pairs before hashing.
      */
-    renderTreeDiagramBoxed(rootNodeData) {
+    renderTreeDiagramBoxed(rootNodeData, originalKVPairs = []) {
+        // Store original key-value pairs for use in rendering
+        this.currentOriginalKVPairs = originalKVPairs || [];
+        
+        // Debug log to verify data is being passed
+        if (this.currentOriginalKVPairs.length > 0) {
+            console.log('Tree view: Enhanced with', this.currentOriginalKVPairs.length, 'original key-value pairs');
+        }
+        
         const diagramElement = document.getElementById('trie-diagram');
         if (!diagramElement) {
             console.error("#trie-diagram element not found for rendering.");
@@ -204,47 +223,73 @@ class TrieVisualizer {
             this.addPropertyToNode(nodeBox, 'Key', node.key, '#6a0dad');
         }
         
-        // 3. Original key (before hashing) if available - highlight it for visibility
-        if (node.originalKey) {
-            const isRootLevel = level === 0;
-            const propertyDiv = document.createElement('div');
-            propertyDiv.className = 'mpt-property mpt-original-key-property';
-            propertyDiv.style.fontSize = '13px';
-            propertyDiv.style.marginTop = '8px';
-            propertyDiv.style.padding = '8px';
-            propertyDiv.style.backgroundColor = '#e8f5e9';
-            propertyDiv.style.borderRadius = '4px';
-            propertyDiv.style.border = '1px solid #81c784';
-            
-            // Add label with more prominent styling
-            const labelSpan = document.createElement('span');
-            labelSpan.className = 'mpt-property-label';
-            labelSpan.style.color = '#2e7d32';
-            labelSpan.style.fontWeight = 'bold';
-            labelSpan.style.fontSize = isRootLevel ? '14px' : '13px';
-            labelSpan.textContent = 'Original Key:';
-            propertyDiv.appendChild(labelSpan);
-            
-            // Add value with prominent styling
-            const valueSpan = document.createElement('div');
-            valueSpan.className = 'mpt-property-value';
-            valueSpan.style.fontFamily = 'Consolas, monospace';
-            valueSpan.style.fontSize = isRootLevel ? '15px' : '13px';
-            valueSpan.style.marginTop = '4px';
-            valueSpan.style.fontWeight = 'bold';
-            valueSpan.style.padding = '4px';
-            valueSpan.style.backgroundColor = 'rgba(255,255,255,0.7)';
-            valueSpan.style.borderRadius = '3px';
-            valueSpan.textContent = node.originalKey;
-            propertyDiv.appendChild(valueSpan);
-            
-            nodeBox.appendChild(propertyDiv);
+        // 3. Original key (before hashing) if available - use standard styling and trim leading zeros
+        // Note: Backend uses OriginalKey (capitalized) - check both cases for compatibility
+        if (node.OriginalKey || node.originalKey) {
+            const originalKey = node.OriginalKey || node.originalKey;
+            const trimmedOriginalKey = this.trimLeadingZeros(originalKey);
+            this.addPropertyToNode(nodeBox, 'Original Key', trimmedOriginalKey, '#2e7d32');
         }
         
-        // 4. Value for short nodes with value
+        // 4. Value for short nodes with value - enhanced with original value
         if (node.isLeaf || node.type === 'shortNode_value') {
             if (node.value !== undefined && node.value !== null) {
                 this.addPropertyToNode(nodeBox, 'Value', node.value, '#1976d2');
+                
+                // Check for original value first from backend data (preferred method)
+                // Note: Backend uses OriginalValue (capitalized) - check both cases for compatibility
+                if (node.OriginalValue || node.originalValue) {
+                    const originalValue = node.OriginalValue || node.originalValue;
+                    const trimmedOriginalValue = this.trimLeadingZeros(originalValue);
+                    console.log('Found original value directly from backend:', originalValue);
+                    this.addPropertyToNode(nodeBox, 'Original Value', trimmedOriginalValue, '#1565c0');
+                }
+                // Fallback: try to match using originalKVPairs if backend didn't provide it
+                else if (this.currentOriginalKVPairs && this.currentOriginalKVPairs.length > 0) {
+                    // Debug logging
+                    console.log('Backend originalValue not found, trying manual matching for leaf node:', {
+                        nodeKey: node.key,
+                        nodeValue: node.value,
+                        nodeOriginalKey: node.originalKey,
+                        availableKVPairs: this.currentOriginalKVPairs
+                    });
+                    
+                    // Try multiple matching strategies
+                    let matchingKV = null;
+                    
+                    // Strategy 1: Match by original key
+                    if (node.originalKey) {
+                        matchingKV = this.currentOriginalKVPairs.find(kv => 
+                            kv.originalKey === node.originalKey
+                        );
+                    }
+                    
+                    // Strategy 2: Match by key hex (with or without 0x prefix)
+                    if (!matchingKV && node.key) {
+                        const nodeKeyNormalized = node.key.replace(/^0x/, '');
+                        matchingKV = this.currentOriginalKVPairs.find(kv => {
+                            const kvKeyNormalized = kv.keyHex ? kv.keyHex.replace(/^0x/, '') : '';
+                            return kvKeyNormalized === nodeKeyNormalized;
+                        });
+                    }
+                    
+                    // Strategy 3: Match by value hex if available
+                    if (!matchingKV && node.value) {
+                        const nodeValueNormalized = node.value.replace(/^0x/, '');
+                        matchingKV = this.currentOriginalKVPairs.find(kv => {
+                            const kvValueNormalized = kv.valueHex ? kv.valueHex.replace(/^0x/, '') : '';
+                            return kvValueNormalized === nodeValueNormalized;
+                        });
+                    }
+                    
+                    console.log('Manual matching result:', matchingKV);
+                    
+                    if (matchingKV && matchingKV.originalValue) {
+                        const trimmedOriginalValue = this.trimLeadingZeros(matchingKV.originalValue);
+                        console.log('Found matching KV pair via manual matching, adding original value:', matchingKV.originalValue);
+                        this.addPropertyToNode(nodeBox, 'Original Value', trimmedOriginalValue, '#1565c0');
+                    }
+                }
             }
         }
         
@@ -509,5 +554,23 @@ class TrieVisualizer {
         propertyDiv.appendChild(valueContainer);
         
         nodeBox.appendChild(propertyDiv);
+    }
+    
+    /**
+     * Remove leading zeros from hex values, keeping at least one zero
+     * @param {string} hexValue - The hex value to trim
+     * @returns {string} - The trimmed hex value
+     */
+    trimLeadingZeros(hexValue) {
+        if (!hexValue || typeof hexValue !== 'string') return hexValue;
+        
+        // Remove 0x prefix if present
+        let value = hexValue.startsWith('0x') ? hexValue.slice(2) : hexValue;
+        
+        // Remove leading zeros but keep at least one character
+        value = value.replace(/^0+/, '') || '0';
+        
+        // Add back 0x prefix
+        return '0x' + value;
     }
 }
