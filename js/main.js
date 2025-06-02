@@ -21,9 +21,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
     const loadingMessage = document.getElementById('loading-message');
 
+    // Storage value retrieval functionality
+    const getValueKeyInput = document.getElementById('get-value-key');
+    const getValueBtn = document.getElementById('get-value-btn');
+    const currentValue = document.getElementById('current-value');
+    const originalValue = document.getElementById('original-value');
+    const proofGenerated = document.getElementById('proof-generated');
+
     // Proof functionality
     const proofKeyInput = document.getElementById('proof-key');
+    const proofRootInput = document.getElementById('proof-root');
     const getProofBtn = document.getElementById('get-proof-btn');
+    const useCurrentRootBtn = document.getElementById('use-current-root-btn');
     const proofRootHash = document.getElementById('proof-root-hash');
     const proofValue = document.getElementById('proof-value');
 
@@ -32,6 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedAccount = null; // Currently selected account
     let pendingStorage = {}; // { address: { key: value, ... } }
     let currentView = 'text';
+
+    // Initialize TrieVisualizer early
+    const trieVisualizer = new TrieVisualizer();
 
     // --- UI Helpers ---
     function setLoading(loading) {
@@ -110,6 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         updateTrieBtn.disabled = false;
     }
+    
     function switchView(view) {
         trieVisualizer.switchView(view);
     }
@@ -275,37 +288,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     async function fetchAndShowTrie(addr) {
         try {
-            const data = await apiCall('/api/account/get', { address: addr });
+            setLoading(true);
+            setError('');
+            const data = await ApiClient.getAccount(addr);
             if (data && data.trie) {
                 updateTrieVisualization(data.trie);
+                if (data.trie.rootHash) {
+                    rootHashElem.textContent = data.trie.rootHash;
+                }
             } else {
                 setError('No trie data in response.');
                 clearTrieVisualization();
             }
+            setLoading(false);
         } catch (e) {
-            // error already shown
+            setError(e.message || 'Failed to fetch trie data');
             clearTrieVisualization();
-        }
-    }
-
-    // --- API Helpers ---
-    async function apiCall(url, body) {
-        setLoading(true);
-        setError('');
-        try {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            const data = await res.json();
             setLoading(false);
-            if (!res.ok || data.error) throw new Error(data.error || 'API error');
-            return data;
-        } catch (e) {
-            setLoading(false);
-            setError(e.message || 'API error');
-            throw e;
         }
     }
 
@@ -317,18 +316,31 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         const paddedAddr = '0x' + addr.slice(2).padStart(40, '0');
-        if (!accounts.includes(paddedAddr)) {
-            accounts.push(paddedAddr);
+        
+        try {
+            setLoading(true);
+            setError('');
+            await ApiClient.createAccount(paddedAddr);
+            
+            if (!accounts.includes(paddedAddr)) {
+                accounts.push(paddedAddr);
+            }
+            if (!pendingStorage[paddedAddr]) {
+                pendingStorage[paddedAddr] = {};
+            }
+            setCurrentAccount(paddedAddr);
+            addressInput.value = '';
+            setLoading(false);
+        } catch (e) {
+            setError(e.message || 'Failed to create account');
+            setLoading(false);
         }
-        if (!pendingStorage[paddedAddr]) {
-            pendingStorage[paddedAddr] = {};
-        }
-        setCurrentAccount(paddedAddr);
-        addressInput.value = '';
     };
+    
     function selectAccount(addr) {
         setCurrentAccount(addr);
     }
+    
     addStorageBtn.onclick = () => {
         if (!selectedAccount) {
             setError('Select an account first.');
@@ -347,7 +359,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStorageList();
         storageKeyInput.value = '';
         storageValueInput.value = '';
+        setError('');
     };
+    
     updateTrieBtn.onclick = async () => {
         if (!selectedAccount) {
             setError('No account selected.');
@@ -359,30 +373,155 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            // First, send the batch to update the pending state
-            await apiCall('/api/storage/batch', { address: selectedAccount, storage: items });
-            // Debug log
-            console.log("Calling /api/trie/update");
-            // Then, commit the trie and get the updated trie data
-            const data = await apiCall('/api/trie/update', { address: selectedAccount });
+            setLoading(true);
+            setError('');
+            // Call the consolidated storage update endpoint
+            const data = await ApiClient.updateStorage(selectedAccount, items);
             if (data && data.trie) {
                 updateTrieVisualization(data.trie);
+                if (data.trie.rootHash) {
+                    rootHashElem.textContent = data.trie.rootHash;
+                }
             } else {
                 setError('No trie data in response.');
                 clearTrieVisualization();
             }
-            // Clear pending storage for this account after commit
+            // Clear pending storage for this account after successful update
             pendingStorage[selectedAccount] = {};
             renderStorageList();
+            setLoading(false);
         } catch (e) {
-            // error already shown
+            setError(e.message || 'Failed to update storage');
+            setLoading(false);
         }
     };
+    
     textViewBtn.onclick = () => switchView('text');
     treeViewBtn.onclick = () => switchView('tree');
 
-    // --- TrieVisualizer integration ---
-    const trieVisualizer = new TrieVisualizer();
+    // Storage value retrieval functionality
+    getValueBtn.addEventListener('click', async function() {
+        if (!selectedAccount) {
+            setError('Please select an account first');
+            return;
+        }
+        const key = getValueKeyInput.value.trim();
+
+        if (!key) {
+            setError('Please enter a storage key');
+            return;
+        }
+
+        if (!/^0x[0-9a-fA-F]+$/.test(key)) {
+            setError('Key must be a valid hex string (0x...)');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+            const result = await ApiClient.getStorageValue(selectedAccount, key);
+            
+            // Format the current value with 0x prefix if not zero
+            const currentVal = result.value && result.value !== '0' ? '0x' + result.value : '0x0';
+            currentValue.textContent = currentVal;
+            
+            // Show if original value matches (from the originalMatch boolean)
+            originalValue.textContent = result.originalMatch ? 'Matches' : 'No match/Not set';
+            
+            // Proof is generated automatically during storage updates
+            proofGenerated.textContent = 'Available';
+            
+            setLoading(false);
+        } catch (error) {
+            setError('Failed to get storage value: ' + error.message);
+            currentValue.textContent = '-';
+            originalValue.textContent = '-';
+            proofGenerated.textContent = '-';
+            setLoading(false);
+        }
+    });
+
+    // Proof functionality
+    getProofBtn.addEventListener('click', async function() {
+        if (!selectedAccount) {
+            setError('Please select an account first');
+            return;
+        }
+        const key = proofKeyInput.value.trim();
+        const rootHash = proofRootInput.value.trim();
+
+        if (!key) {
+            setError('Please enter a storage key');
+            return;
+        }
+
+        if (!rootHash) {
+            setError('Please enter a root hash');
+            return;
+        }
+
+        if (!/^0x[0-9a-fA-F]+$/.test(key)) {
+            setError('Key must be a valid hex string (0x...)');
+            return;
+        }
+
+        if (!/^0x[0-9a-fA-F]{64}$/.test(rootHash)) {
+            setError('Root hash must be a valid 64-character hex string (0x...)');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+            
+            // Use the user-provided root hash for proof verification
+            const result = await ApiClient.getProof(selectedAccount, key, rootHash);
+            
+            // The backend returns just the value from proof verification
+            const proofVal = result.value && result.value !== '' ? '0x' + result.value : 'Not found';
+            proofValue.textContent = proofVal;
+            
+            // Display the root hash that was used for verification
+            proofRootHash.textContent = rootHash;
+            
+            setLoading(false);
+        } catch (error) {
+            setError('Failed to get proof: ' + error.message);
+            proofRootHash.textContent = '-';
+            proofValue.textContent = '-';
+            setLoading(false);
+        }
+    });
+
+    // Use Current Root button functionality
+    useCurrentRootBtn.addEventListener('click', async function() {
+        if (!selectedAccount) {
+            setError('Please select an account first');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            setError('');
+            
+            // Get the current account data to obtain the root hash
+            const accountData = await ApiClient.getAccount(selectedAccount);
+            
+            if (accountData && accountData.trie && accountData.trie.rootHash) {
+                // Fill the root input field with the current root hash
+                proofRootInput.value = accountData.trie.rootHash;
+                setError(''); // Clear any previous errors
+            } else {
+                setError('No root hash available. Please update storage first.');
+            }
+            
+            setLoading(false);
+        } catch (error) {
+            setError('Failed to get current root hash: ' + error.message);
+            setLoading(false);
+        }
+    });
 
     // --- Initial State ---
     renderAccountList();
@@ -391,26 +530,4 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTrieVisualization();
     setError('');
     setLoading(false);
-
-    // Proof functionality
-    getProofBtn.addEventListener('click', async function() {
-        const address = document.getElementById('address-input').value;
-        const key = proofKeyInput.value;
-
-        if (!address || !key) {
-            showError('Please enter both address and key');
-            return;
-        }
-
-        try {
-            showLoading();
-            const result = await ApiClient.getProof(address, key);
-            proofRootHash.textContent = result.rootHash;
-            proofValue.textContent = result.value || 'Not found';
-            hideLoading();
-        } catch (error) {
-            showError('Failed to get proof: ' + error.message);
-            hideLoading();
-        }
-    });
 });

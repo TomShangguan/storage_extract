@@ -32,11 +32,29 @@
                     <div id="storage-list" class="storage-list"></div>
                     <button id="update-trie-btn" disabled>Update Trie</button>
                 </div>
+                <div class="storage-retrieval-section">
+                    <h2>Storage Value Retrieval</h2>
+                    <div class="input-group">
+                        <input type="text" id="get-value-key" placeholder="Key to retrieve (0x...)" autocomplete="off">
+                        <button id="get-value-btn">Get Value</button>
+                    </div>
+                    <div id="value-result" class="value-result">
+                        <div>Current Value: <span id="current-value">-</span></div>
+                        <div>Original Value: <span id="original-value">-</span></div>
+                        <div>Proof Generated: <span id="proof-generated">-</span></div>
+                    </div>
+                </div>
                 <div class="proof-section">
                     <h2>Merkle Proof</h2>
                     <div class="input-group">
                         <input type="text" id="proof-key" placeholder="Key to prove (0x...)" autocomplete="off">
-                        <button id="get-proof-btn">Get Proof</button>
+                    </div>
+                    <div class="input-group proof-root-group">
+                        <input type="text" id="proof-root" placeholder="Root hash (0x...)" autocomplete="off">
+                        <button type="button" id="use-current-root-btn" class="use-current-root-btn" title="Use current trie root hash">Use Current Root</button>
+                    </div>
+                    <div class="input-group">
+                        <button id="get-proof-btn" class="proof-action-btn">Get Proof</button>
                     </div>
                     <div id="proof-result" class="proof-result">
                         <div>Root Hash: <span id="proof-root-hash">-</span></div>

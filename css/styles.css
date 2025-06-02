@@ -62,14 +62,17 @@ h2 {
     display: flex;
     gap: 10px;
     margin-bottom: 15px;
+    align-items: stretch;
 }
 
 input {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+    min-height: 44px;
+    box-sizing: border-box;
 }
 
 button {
@@ -77,9 +80,17 @@ button {
     color: white;
     border: none;
     border-radius: 4px;
-    padding: 10px 15px;
+    padding: 12px 16px;
     cursor: pointer;
     transition: background-color 0.3s;
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 100px;
+    min-height: 44px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 button:hover {
@@ -89,6 +100,12 @@ button:hover {
 button:disabled {
     background-color: #ccc;
     cursor: not-allowed;
+}
+
+/* Storage section button styling */
+.storage-section button:not(#update-trie-btn) {
+    min-width: 80px;
+    padding: 12px 16px;
 }
 
 .storage-form {
@@ -134,8 +151,9 @@ button:disabled {
 #update-trie-btn {
     width: 100%;
     background-color: #27ae60;
-    padding: 12px;
+    padding: 14px;
     font-weight: bold;
+    min-height: 48px;
 }
 
 #update-trie-btn:hover {
@@ -158,7 +176,8 @@ button:disabled {
     background-color: #f8f9fa;
     color: #333;
     border: 1px solid #ddd;
-    padding: 8px 15px;
+    padding: 12px 16px;
+    min-height: 44px;
 }
 
 .view-controls button.active {
@@ -554,6 +573,51 @@ h2 span[title] { display: none !important; }
     color: #222;
 }
 
+/* Section styling for consistent appearance */
+.account-section, .storage-section, .storage-retrieval-section, .proof-section {
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px solid #e1e1e1;
+}
+
+.storage-retrieval-section {
+    margin-top: 20px;
+}
+
+/* Input and button consistency across all sections */
+.storage-retrieval-section input[type="text"] {
+    font-family: monospace;
+}
+
+.storage-retrieval-section button {
+    background-color: #3498db;
+    min-width: 120px;
+}
+
+.storage-retrieval-section button:hover {
+    background-color: #2980b9;
+}
+
+.value-result {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.value-result div {
+    margin: 5px 0;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.value-result span {
+    color: #2196F3;
+    word-break: break-all;
+}
+
 .proof-section {
     margin-top: 20px;
     padding: 15px;
@@ -566,6 +630,81 @@ h2 span[title] { display: none !important; }
     margin-bottom: 15px;
     font-size: 1.2em;
     color: #333;
+}
+
+/* Proof section input styling */
+.proof-section .input-group {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.proof-section input[type="text"] {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: monospace;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
+.proof-root-group {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+.proof-root-group input {
+    flex: 2;
+    min-height: 44px;
+}
+
+.use-current-root-btn {
+    background-color: #9b59b6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 44px;
+    min-width: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.use-current-root-btn:hover {
+    background-color: #8e44ad;
+}
+
+.proof-action-btn {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 14px;
+    font-weight: 500;
+    min-height: 44px;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.proof-action-btn:hover {
+    background-color: #2ecc71;
 }
 
 .proof-result {
