@@ -248,4 +248,82 @@
    - Enhanced visual hierarchy and added tooltips.
 
 ### TODOs
-1. Provide block-by-block transaction handling and tree view updates.
+1. Implement backend persistent process for MPT
+
+---
+
+## 2025/6/18 Progress
+
+### Newly Implemented Components
+  - Complete MPT commit process implementation
+  - Added `commit()`, `commitChildren()`, and `store()` functions
+  - Comments explaining commit workflow
+  - Complete NodeSet implementation for tracking dirty nodes
+  - MergedNodeSet for aggregating multiple trie changes
+
+### TODOs
+1. Complete state object storage commitment
+2. Implement concurrent commit processing
+3. Add proper node set merging logic
+
+---
+
+## 2025/6/19 Progress
+
+### Newly Implemented Components
+   - Complete `hash()`, `hashShortNodeChildren()`, and `hashFullNodeChildren()` functions
+   - Complete `Commit()` implementation with dirty node collection
+   - Added committed flag for trie lifecycle management
+   - Implemented `Commit()` function for StateTrie
+
+### TODOs
+1. Complete StateDB commit functionality
+2. Implement concurrent storage processing
+3. Enhance state update aggregation
+
+---
+
+## 2025/6/20 Progress
+
+### Newly Implemented Components
+  - Implemented `commitStorage()` for storage change serialization.
+  - Added `commit()` function to return account updates and node sets.
+  - Implemented `SlimAccountRLP()` for account encoding.
+  - Added `HashData()` function for hashing operations.
+
+### TODOs
+1. Implement full StateDB commit integration
+2. Add concurrent processing support for storage operations
+3. Complete state update aggregation and merging logic
+
+---
+
+## 2025/6/21 Progress
+
+### Newly Implemented Components
+  - Completed the `commit()` function with support for concurrent processing.
+  - Added aggregation and merging for storage trie nodes.
+  - Finalized `stateUpdate` and `accountUpdate` structures.
+  - Implemented logic for tracking and merging storage changes.
+  - Added a `Commit` interface to the Trie for nodeset collection.
+
+### TODOs
+1. Enhance state change monitoring and debugging tools
+2. Integrate frontend visualization with commit operations
+
+---
+
+## 2025/6/22 Progress
+
+### Newly Implemented Components
+  - Full integration between StateDB, StateObject, and Trie commit systems
+  - Added comprehensive debug logging for commit operations
+  - Enhanced trie structure visualization for debugging
+  - Frontend Enhancements**
+  - Improved MPT visualization with better node styling
+  - Enhanced CSS for different node types (branch, root, short)
+
+
+### TODOs
+1. Implement actual database persistence layer
+2. Implement account trie in stateDB

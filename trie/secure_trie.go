@@ -3,6 +3,7 @@ package trie
 import (
 	"fmt"
 	"storage_extract/common"
+	"storage_extract/trie/trienode"
 
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -59,6 +60,20 @@ func (t *StateTrie) UpdateStorage(_ common.Address, key, value []byte) error {
 	// TODO: Logic for secKeyCache
 
 	return nil
+}
+
+// Commit collects all dirty nodes in the trie and replaces them with the
+// corresponding node hash. All collected nodes (including dirty leaves if
+// collectLeaf is true) will be encapsulated into a nodeset for return.
+// The returned nodeset can be nil if the trie is clean (nothing to commit).
+// All cached preimages will be also flushed if preimages recording is enabled.
+// Once the trie is committed, it's not usable anymore. A new trie must
+// be created with new root and updated trie database for following usage
+// Original function: github.com/ethereum/go-ethereum/trie/secure_trie.go line 252
+func (t *StateTrie) Commit(collectLeaf bool) (common.Hash, *trienode.NodeSet) {
+	// TODO: Write all the pre-images to the actual disk database
+	// Commit the trie and return its modified nodeset.
+	return t.trie.Commit(collectLeaf)
 }
 
 // Hash returns the root hash of StateTrie. It does not write to the

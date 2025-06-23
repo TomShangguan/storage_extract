@@ -1,7 +1,10 @@
 package state
 
 import (
+	"errors"
 	"storage_extract/common"
+	"storage_extract/trie/trienode"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -38,7 +41,9 @@ type StateDB struct {
 	// perspective. This map is populated at the transaction boundaries.
 	mutations map[common.Address]*mutation
 
+	// Measurements gathered during execution for debugging purposes
 	StorageUpdates time.Duration // Time taken for storage updates
+	StorageCommits time.Duration
 }
 
 // New creates a new state from a given trie.
@@ -173,7 +178,78 @@ func (s *StateDB) commit(deleteEmptyObjects bool) (*stateUpdate, error) {
 	// TODO: Error check of db before executing the commit
 	s.IntermediateRoot(deleteEmptyObjects)
 	// TODO: Intermediate processing
-	return nil, nil
+	var (
+		storageTrieNodesUpdated int
+		storageTrieNodesDeleted int
+		lock                    sync.Mutex                                               // protect two maps below
+		nodes                   = trienode.NewMergedNodeSet()                            // aggregated trie nodes
+		updates                 = make(map[common.Hash]*accountUpdate, len(s.mutations)) // aggregated account updates
+		// merge aggregates the dirty trie nodes into the global set.
+		//
+		// Given that some accounts may be destroyed and then recreated within
+		// the same block, it's possible that a node set with the same owner
+		// may already exists. In such cases, these two sets are combined, with
+		// the later one overwriting the previous one if any nodes are modified
+		// or deleted in both sets.
+		//
+		// merge run concurrently across  all the state objects and account trie.
+		merge = func(set *trienode.NodeSet) error {
+			if set == nil {
+				return nil
+			}
+			lock.Lock()
+			defer lock.Unlock()
+
+			updates, deletes := set.Size()
+			if set.Owner == (common.Hash{}) {
+				// TODO: Handle the case for account trie updates
+			} else {
+				storageTrieNodesUpdated += updates
+				storageTrieNodesDeleted += deletes
+			}
+			return nodes.Merge(set)
+		}
+	)
+
+	// Handle all state updates afterwards, concurrently to one another to shave
+	// off some milliseconds from the commit operation. Also accumulate the code
+	// writes to run in parallel with the computations.
+	var (
+		start   = time.Now()
+		workers errgroup.Group
+	)
+
+	// Schedule each of the storage tries that need to be updated, so they can
+	// run concurrently to one another.
+	for addr, _ := range s.mutations {
+		obj := s.stateObjects[addr]
+		if obj == nil {
+			return nil, errors.New("missing state object")
+		}
+		workers.Go(func() error {
+			// Write any storage changes in the state object to its storage trie
+			update, set, err := obj.commit()
+			if err != nil {
+				return err
+			}
+			if err := merge(set); err != nil {
+				return err
+			}
+			lock.Lock()
+			updates[obj.addrHash] = update
+			s.StorageCommits = time.Since(start) // overwrite with the longest storage commit runtime
+			lock.Unlock()
+			return nil
+		})
+	}
+	// TODO: Intermediate processing
+	if err := workers.Wait(); err != nil {
+		return nil, err
+	}
+	// Clear all internal flags and update state root at the end.
+	s.mutations = make(map[common.Address]*mutation)
+
+	return newStateUpdate(updates, nodes), nil
 }
 
 // commitAndFlush is a wrapper of commit which also commits the state mutations
@@ -181,7 +257,8 @@ func (s *StateDB) commit(deleteEmptyObjects bool) (*stateUpdate, error) {
 // Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 1260
 func (s *StateDB) commitAndFlush(block uint64, deleteEmptyObjects bool) (*stateUpdate, error) {
 	ret, err := s.commit(deleteEmptyObjects)
-	// TODO: Intermediate processing
+	// Commit objects to the trie, measuring the elapsed time
+
 	return ret, err
 }
 

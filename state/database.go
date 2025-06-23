@@ -5,6 +5,7 @@ import (
 	"storage_extract/common"
 	"storage_extract/crypto"
 	"storage_extract/trie"
+	"storage_extract/trie/trienode"
 )
 
 // Database wraps access to tries and contract code.
@@ -28,6 +29,15 @@ type Trie interface {
 	// can be used even if the trie doesn't have one.
 	Hash() common.Hash
 
+	// Commit collects all dirty nodes in the trie and replace them with the
+	// corresponding node hash. All collected nodes(including dirty leaves if
+	// collectLeaf is true) will be encapsulated into a nodeset for return.
+	// The returned nodeset can be nil if the trie is clean(nothing to commit).
+	// Once the trie is committed, it's not usable anymore. A new trie must
+	// be created with new root and updated trie database for following usage
+	Commit(collectLeaf bool) (common.Hash, *trienode.NodeSet)
+
+	// -------------------------------------------------------------------------------
 	// PrintTrie prints the structure of the trie in a human-readable format.
 	// It recursively traverses the trie and displays each node with proper indentation.
 	// Notice: This function is not included in the original code.

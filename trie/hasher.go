@@ -39,7 +39,7 @@ func newHasher(parallel bool) *hasher {
 
 // hash collapses a node down into a hash node, also returning a copy of the
 // original node initialized with the computed hash to replace the original one.
-// Original function: github.com/ethereum/go-ethereum/trie/secure_trie.go line 58
+// Original function: github.com/ethereum/go-ethereum/trie/hasher.go line 58
 func (h *hasher) hash(n node, force bool) (hashed node, cached node) {
 	// Return the cached hash if it's available
 	if hash, _ := n.cache(); hash != nil {
@@ -75,7 +75,7 @@ func (h *hasher) hash(n node, force bool) (hashed node, cached node) {
 
 // hashShortNodeChildren collapses the short node. The returned collapsed node
 // holds a live reference to the Key, and must not be modified.
-// Original function: github.com/ethereum/go-ethereum/trie/secure_trie.go line 93
+// Original function: github.com/ethereum/go-ethereum/trie/hasher.go line 93
 func (h *hasher) hashShortNodeChildren(n *shortNode) (collapsed, cached *shortNode) {
 	// Hash the short node's child, caching the newly hashed subtree
 	collapsed, cached = n.copy(), n.copy()
