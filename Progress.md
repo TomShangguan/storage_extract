@@ -250,7 +250,6 @@
 ### TODOs
 1. Implement backend persistent process for MPT
 
-
 ---
 
 ## 2025/6/18 Progress

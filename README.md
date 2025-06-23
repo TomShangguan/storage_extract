@@ -56,7 +56,8 @@ The web interface provides the following functionalities:
 1.  **Create an Account**: Enter an Ethereum address (e.g., `0x...`) to initialize its corresponding state object and storage trie.
 2.  **Set Storage**: For a selected account, input key-value pairs. Both keys and values should be provided in hexadecimal format (e.g., key: `0x01`, value: `0x123abc`).
 3.  **Update Trie**: After setting or modifying storage key-value pairs, click the "Update Trie" button. This action commits the changes to the in-memory trie and refreshes the MPT visualization (both Text and Tree views).
-4.  **View MPT**:
+4. **Merkle Proof Service**: Generate cryptographic proofs for storage keys, verify them against specific root hashes (or the current trie root), and view validation results that confirm the authentic inclusion of key-value pairs in the Merkle Patricia Trie.
+5.  **View MPT**:
     *   **Text View**: Displays a raw, hierarchical text dump of the current trie structure. This is useful for a quick overview and debugging.
     *   **Tree View**: Renders an interactive, graphical representation of the MPT. Nodes are color-coded or shaped by type (branch, extension, leaf).
 
@@ -72,6 +73,7 @@ The GitHub Pages hosted version of this application is primarily for demonstrati
 ├── go.mod, go.sum     
 ├── main.go            
 ├── README.md          
+├── back_api/          # Backend API implementation with Gin framework
 ├── common/            # Utility functions and types (e.g., hex manipulation, custom types)
 ├── crypto/            # Cryptographic helpers, primarily Keccak256 hashing
 ├── ethdb/             # Database interface layer (currently uses a mock CachingDB for in-memory storage)
@@ -79,7 +81,7 @@ The GitHub Pages hosted version of this application is primarily for demonstrati
 │   ├── index.html     
 │   ├── css/           
 │   └── js/            
-├── state/             # Core state management, API handlers, and StateDB logic
+├── state/             # Core state management, and StateDB logic
 ├── trie/              # Merkle Patricia Trie (MPT) implementation and associated helper functions
 │   └── trienode/      # MPT node definitions and specific proof generation/verification logic
 └── types/             # Definitions for core Ethereum types (e.g., Address, Hash, StateAccount)
@@ -119,9 +121,6 @@ The GitHub Pages hosted version of this application is primarily for demonstrati
 
 ## Future Enhancements (TODOs)
 
--   **Complete Frontend for Proof Service**:
-    -   Enhance the UI for displaying Merkle proofs in a more user-friendly format.
-    -   Streamline the workflow for proof generation and verification directly from the interface.
 -   **Richer MPT Information Display**:
     -   Provide more contextual details within the MPT visualization (e.g., RLP encoded node data, key before hash for each node).
 -   **Persistent Storage**:
