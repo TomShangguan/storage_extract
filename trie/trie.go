@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"storage_extract/common"
+	"storage_extract/trie/trienode"
 	"storage_extract/types"
 )
 
@@ -15,6 +16,10 @@ import (
 type Trie struct {
 	root  node
 	owner common.Hash
+
+	// Flag whether the commit operation is already performed. If so the
+	// trie is not usable(latest states is invisible).
+	committed bool
 
 	// Keep track of the number leaves which have been inserted since the last
 	// hashing operation. This number will not directly map to the number of
@@ -169,6 +174,45 @@ func (t *Trie) Hash() common.Hash {
 	hash, cached := t.hashRoot()
 	t.root = cached
 	return common.BytesToHash(hash.(hashNode))
+}
+
+// Commit collects all dirty nodes in the trie and replaces them with the
+// corresponding node hash. All collected nodes (including dirty leaves if
+// collectLeaf is true) will be encapsulated into a nodeset for return.
+// The returned nodeset can be nil if the trie is clean (nothing to commit).
+// Once the trie is committed, it's not usable anymore. A new trie must
+// be created with new root and updated trie database for following usage
+// Oringinal function: github.com/ethereum/go-ethereum/trie/trie.go line 621
+func (t *Trie) Commit(collectLeaf bool) (common.Hash, *trienode.NodeSet) {
+	defer func() {
+		t.committed = true
+	}()
+	// TODO:
+	// Trie is empty and can be classified into two types of situations:
+	// (a) The trie was empty and no update happens => return nil
+	// (b) The trie was non-empty and all nodes are dropped => return
+	//     the node set includes all deleted nodes
+
+	// Derive the hash for all dirty nodes first. We hold the assumption
+	// in the following procedure that all nodes are hashed.
+	rootHash := t.Hash()
+	// Do a quick check if we really need to commit. This can happen e.g.
+	// if we load a trie for reading storage values, but don't write to it.
+	if hashedNode, dirty := t.root.cache(); !dirty {
+		// Replace the root node with the origin hash in order to
+		// ensure all resolved nodes are dropped after the commit.
+		t.root = hashedNode
+		return rootHash, nil
+	}
+	nodes := trienode.NewNodeSet(t.owner)
+	// TODO: Handle deletion of nodes
+	// for _, path := range t.tracer.deletedNodes() {
+	// 	nodes.AddNode([]byte(path), trienode.NewDeleted())
+	// }
+	// If the number of changes is below 100, we let one thread handle it
+	t.root = newCommitter(nodes, collectLeaf).Commit(t.root, t.uncommitted > 100)
+	t.uncommitted = 0
+	return rootHash, nodes
 }
 
 // hashRoot calculates the root hash of the given trie

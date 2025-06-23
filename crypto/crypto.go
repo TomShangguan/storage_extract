@@ -50,3 +50,11 @@ func Keccak256Hash(data ...[]byte) (h common.Hash) {
 	d.Read(h[:])
 	return h
 }
+
+// HashData hashes the provided data using the KeccakState and returns a 32 byte hash
+func HashData(kh KeccakState, data []byte) (h common.Hash) {
+	kh.Reset()
+	kh.Write(data)
+	kh.Read(h[:])
+	return h
+}

@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"storage_extract/common"
 	"storage_extract/crypto"
+	"storage_extract/trie/trienode"
 	"storage_extract/types"
+
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // Storage represents a map of storage keys to their values.
@@ -244,6 +247,80 @@ func (s *StateObject) updateRoot() {
 		tr.PrintTrie()
 	}
 	s.data.Root = tr.Hash()
+}
+
+// commitStorage overwrites the clean storage with the storage changes and
+// fulfills the storage diffs into the given accountUpdate struct.
+// Original function: github.com/ethereum/go-ethereum/core/state/state_object.go line 398
+func (s *StateObject) commitStorage(op *accountUpdate) {
+	var (
+		buf    = crypto.NewKeccakState()
+		encode = func(val common.Hash) []byte {
+			if val == (common.Hash{}) {
+				return nil
+			}
+			blob, _ := rlp.EncodeToBytes(common.TrimLeftZeroes(val[:]))
+			return blob
+		}
+	)
+	for key, val := range s.pendingStorage {
+		// Skip the noop storage changes, it might be possible the value
+		// of tracked slot is same in originStorage and pendingStorage
+		// map, e.g. the storage slot is modified in tx_a and then reset
+		// back in tx_b.
+		// TODO: Add logic to check if the value is same as the original value
+		// if val == s.originStorage[key] {
+		// 	continue
+		// }
+		hash := crypto.HashData(buf, key[:])
+		if op.storages == nil {
+			op.storages = make(map[common.Hash][]byte)
+		}
+		op.storages[hash] = encode(val)
+		fmt.Println("stateObject: ", s.address, " calling commitStorage in state_object.go")
+		fmt.Println("stateObject: ", s.address, "fetch kv from pendingStorage to op, key before hash: ", key, "val before hash: ", val)
+		fmt.Println("stateObject: ", s.address, "fetch kv from pendingStorage to op, hashed (kec) key: ", hash, "encoded value (RLP): ", encode(val))
+		if op.storagesOrigin == nil {
+			op.storagesOrigin = make(map[common.Hash][]byte)
+		}
+		//op.storagesOrigin[hash] = encode(s.originStorage[key])
+
+		// Overwrite the clean value of storage slots
+		//s.originStorage[key] = val
+	}
+	s.pendingStorage = make(Storage)
+}
+
+// commit obtains the account changes (metadata, storage slots, code) caused by
+// state execution along with the dirty storage trie nodes.
+//
+// Note, commit may run concurrently across all the state objects. Do not assume
+// thread-safe access to the statedb.
+// Original function: github.com/ethereum/go-ethereum/core/state/state_object.go  line 441
+func (s *StateObject) commit() (*accountUpdate, *trienode.NodeSet, error) {
+	// commit the account metadata changes
+	op := &accountUpdate{
+		address: s.address,
+		data:    types.SlimAccountRLP(s.data),
+	}
+	// TODO: commit the contract code if it's modified
+	// Commit storage changes and the associated storage trie
+	s.commitStorage(op)
+	if len(op.storages) == 0 {
+		// nothing changed, don't bother to commit the trie
+		// s.origin = s.data.Copy()
+		return op, nil, nil
+	}
+	root, nodes := s.trie.Commit(false)
+	for key, node := range nodes.Nodes {
+		fmt.Println("Owner of the node set: ", s.address, " key of the node: ", key, " ,value: ", node.Hash)
+	}
+	for key, value := range op.storages {
+		fmt.Println("Owner of the op: ", s.address, " key of the update storage: ", key, " ,value: ", value)
+	}
+	s.data.Root = root
+	// s.origin = s.data.Copy()
+	return op, nodes, nil
 }
 
 //------------------------------------------------------------------------------------------------------------------------
