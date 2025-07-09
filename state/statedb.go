@@ -27,7 +27,10 @@ func (m *mutation) isDelete() bool {
 }
 
 type StateDB struct {
-	db           Database
+	db Database
+
+	trie Trie
+
 	stateObjects map[common.Address]*StateObject
 	journal      *journal
 
@@ -49,9 +52,14 @@ type StateDB struct {
 // New creates a new state from a given trie.
 // Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 161
 func New(root common.Hash, db Database) (*StateDB, error) {
+	tr, err := db.OpenTrie(root)
+	if err != nil {
+		return nil, err
+	}
 	// Current implementation ignored the trie loading and doesn't support many elements used in the original code.
 	sdb := &StateDB{
 		db:           db,
+		trie:         tr,
 		stateObjects: make(map[common.Address]*StateObject),
 		journal:      newJournal(),
 		mutations:    make(map[common.Address]*mutation),
@@ -248,7 +256,7 @@ func (s *StateDB) commit(deleteEmptyObjects bool) (*stateUpdate, error) {
 	}
 	// Clear all internal flags and update state root at the end.
 	s.mutations = make(map[common.Address]*mutation)
-
+	// TODO: Update Accounts Trie
 	return newStateUpdate(updates, nodes), nil
 }
 

@@ -10,7 +10,8 @@ import (
 
 // Database wraps access to tries and contract code.
 type Database interface {
-
+	// OpenTrie opens a trie with the given root hash.
+	OpenTrie(root common.Hash) (Trie, error)
 	// OpenStorageTrie opens the storage trie of an account.
 	// TODO: Currently, one parameter is missing: trie Trie (used to check Verkle trie, so not used for now)
 	OpenStorageTrie(stateRoot common.Hash, address common.Address, root common.Hash) (Trie, error)
@@ -47,6 +48,14 @@ type Trie interface {
 // CachingDB is an implementation of Database interface.
 type CachingDB struct {
 	// disk          ethdb.KeyValueStore TODO: provide an mock underlying keyvalue store db
+}
+
+func (db *CachingDB) OpenTrie(root common.Hash) (Trie, error) {
+	tr, err := trie.NewStateTrie(trie.StateTrieID(root))
+	if err != nil {
+		return nil, err
+	}
+	return tr, nil
 }
 
 // OpenStorageTrie opens the storage trie of an account.

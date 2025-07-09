@@ -3,6 +3,7 @@ package state
 import (
 	"storage_extract/common"
 	"storage_extract/trie/trienode"
+	"storage_extract/types"
 )
 
 // stateUpdate represents a collection of changes made to the Ethereum state.
@@ -64,14 +65,14 @@ func newStateUpdate(originRoot common.Hash, root common.Hash, updates map[common
 		}
 	}
 	return &stateUpdate{
-		originRoot:     types.TrieRootHash(originRoot),
-		root:           types.TrieRootHash(root),
-		destructs:      destructs,
-		accounts:       accounts,
-		accountsOrigin: accountsOrigin,
+		originRoot: types.TrieRootHash(originRoot),
+		root:       types.TrieRootHash(root),
+		// destructs:      destructs,
+		// accounts:       accounts,
+		// accountsOrigin: accountsOrigin,
 		storages:       storages,
 		storagesOrigin: storagesOrigin,
-		codes:          codes,
-		nodes:          nodes,
+		// codes:          codes,
+		nodes: nodes,
 	}
 }

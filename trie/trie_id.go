@@ -11,6 +11,15 @@ type ID struct {
 	Root      common.Hash // The root hash of trie
 }
 
+// StateTrieID constructs an identifier for state trie with the provided state root.
+func StateTrieID(root common.Hash) *ID {
+	return &ID{
+		StateRoot: root,
+		Owner:     common.Hash{},
+		Root:      root,
+	}
+}
+
 // StorageTrieID constructs an identifier for storage trie which belongs to a certain
 // state and contract specified by the stateRoot and owner.
 func StorageTrieID(stateRoot common.Hash, owner common.Hash, root common.Hash) *ID {
