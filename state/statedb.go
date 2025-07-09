@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 	"storage_extract/common"
 	"storage_extract/trie/trienode"
 	"sync"
@@ -29,6 +30,8 @@ func (m *mutation) isDelete() bool {
 type StateDB struct {
 	db Database
 
+	// Account trie
+	// The trie is used to store the state objects, which are the accounts in the Ethereum
 	trie Trie
 
 	stateObjects map[common.Address]*StateObject
@@ -76,6 +79,21 @@ func (s *StateDB) SetState(addr common.Address, key, value common.Hash) common.H
 		return stateObject.SetState(key, value)
 	}
 	return common.Hash{}
+}
+
+//
+// Setting, updating & deleting state object methods.
+//
+
+// updateStateObject writes the given object to the trie.
+// Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 553
+func (s *StateDB) updateStateObject(obj *StateObject) {
+	// Encode the account and update the account trie
+	addr := obj.Address()
+	if err := s.trie.UpdateAccount(addr, &obj.data); err != nil {
+		fmt.Println(fmt.Errorf("updateStateObject (%x) error: %v", addr[:], err))
+	}
+	// TODO: Dirty Contracts handling
 }
 
 // getStateObject retrieves the state object for the given address.

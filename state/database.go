@@ -6,6 +6,7 @@ import (
 	"storage_extract/crypto"
 	"storage_extract/trie"
 	"storage_extract/trie/trienode"
+	"storage_extract/types"
 )
 
 // Database wraps access to tries and contract code.
@@ -19,6 +20,13 @@ type Database interface {
 
 // Trie is a Ethereum Merkle Patricia trie.
 type Trie interface {
+
+	// UpdateAccount abstracts an account write to the trie. It encodes the
+	// provided account object with associated algorithm and then updates it
+	// in the trie with provided address.
+	// TODO: The current implementation doesn't support code length, so it is not used.
+	UpdateAccount(address common.Address, account *types.StateAccount) error
+
 	// UpdateStorage associates key with value in the trie. If value has length zero,
 	// any existing value is deleted from the trie. The value bytes must not be modified
 	// by the caller while they are stored in the trie. If a node was not found in the

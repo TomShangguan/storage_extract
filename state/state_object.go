@@ -323,6 +323,12 @@ func (s *StateObject) commit() (*accountUpdate, *trienode.NodeSet, error) {
 	return op, nodes, nil
 }
 
+// Address returns the address of the contract/account
+// Original function: github.com/ethereum/go-ethereum/core/state/state_object.go line 535
+func (s *StateObject) Address() common.Address {
+	return s.address
+}
+
 //------------------------------------------------------------------------------------------------------------------------
 // Below are the additional methods that are not part of the original code but used in the test code snippet.
 

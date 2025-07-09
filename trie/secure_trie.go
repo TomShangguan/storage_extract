@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"storage_extract/common"
 	"storage_extract/trie/trienode"
+	"storage_extract/types"
 
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -19,9 +20,10 @@ import (
 //
 // StateTrie is not safe for concurrent use.
 type StateTrie struct {
-	trie       Trie
-	hashKeyBuf [common.HashLength]byte // buffer for hashKey (hash of key)
-	// secKeyCache      map[string][]byte Not Implemented for now (may not be needed)
+	trie             Trie
+	hashKeyBuf       [common.HashLength]byte // buffer for hashKey (hash of key)
+	secKeyCache      map[string][]byte
+	secKeyCacheOwner *StateTrie // Pointer to self, replace the key cache on mismatch
 }
 
 // NewStateTrie creates a trie with an existing root node from a backing database.
@@ -62,6 +64,21 @@ func (t *StateTrie) UpdateStorage(_ common.Address, key, value []byte) error {
 	return nil
 }
 
+// UpdateAccount will abstract the write of an account to the secure trie.
+// Original function: github.com/ethereum/go-ethereum/trie/secure_trie.go line 187
+func (t *StateTrie) UpdateAccount(address common.Address, acc *types.StateAccount) error {
+	hk := t.hashKey(address.Bytes())
+	data, err := rlp.EncodeToBytes(acc)
+	if err != nil {
+		return err
+	}
+	if err := t.trie.Update(hk, data); err != nil {
+		return err
+	}
+	t.getSecKeyCache()[string(hk)] = address.Bytes()
+	return nil
+}
+
 // Commit collects all dirty nodes in the trie and replaces them with the
 // corresponding node hash. All collected nodes (including dirty leaves if
 // collectLeaf is true) will be encapsulated into a nodeset for return.
@@ -96,12 +113,24 @@ func (t *StateTrie) hashKey(key []byte) []byte {
 	return t.hashKeyBuf[:]
 }
 
-func (t *StateTrie) PrintTrie() {
-	t.trie.PrintTrie()
+// getSecKeyCache returns the current secure key cache, creating a new one if
+// ownership changed (i.e. the current secure trie is a copy of another owning
+// the actual cache).
+// Original function: github.com/ethereum/go-ethereum/trie/secure_trie.go line 311
+func (t *StateTrie) getSecKeyCache() map[string][]byte {
+	if t != t.secKeyCacheOwner {
+		t.secKeyCacheOwner = t
+		t.secKeyCache = make(map[string][]byte)
+	}
+	return t.secKeyCache
 }
 
 //------------------------------------------------------------------------------------------------------------------------
 // Below are the additional methods that are not part of the original code but used in the test code snippet.
+
+func (t *StateTrie) PrintTrie() {
+	t.trie.PrintTrie()
+}
 
 func (t *StateTrie) HashKey(key []byte) []byte {
 	return t.hashKey(key)
