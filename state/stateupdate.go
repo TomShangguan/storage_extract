@@ -3,6 +3,7 @@ package state
 import (
 	"storage_extract/common"
 	"storage_extract/trie/trienode"
+	"storage_extract/triedb"
 	"storage_extract/types"
 )
 
@@ -11,6 +12,8 @@ import (
 type stateUpdate struct {
 	originRoot     common.Hash                               // hash of the state before applying mutation
 	root           common.Hash                               // hash of the state after applying mutation
+	accounts       map[common.Hash][]byte                    // accounts stores mutated accounts in 'slim RLP' encoding
+	accountsOrigin map[common.Address][]byte                 // accountsOrigin stores the original values of mutated accounts in 'slim RLP' encoding
 	storages       map[common.Hash]map[common.Hash][]byte    // storages stores mutated slots in 'prefix-zero-trimmed' RLP format
 	storagesOrigin map[common.Address]map[common.Hash][]byte // storagesOrigin stores the original values of mutated slots in 'prefix-zero-trimmed' RLP format
 	nodes          *trienode.MergedNodeSet                   // Aggregated dirty nodes caused by state changes
@@ -31,6 +34,8 @@ type accountUpdate struct {
 // account deletions and account updates to form a comprehensive state update.
 func newStateUpdate(originRoot common.Hash, root common.Hash, updates map[common.Hash]*accountUpdate, nodes *trienode.MergedNodeSet) *stateUpdate {
 	var (
+		accounts       = make(map[common.Hash][]byte)
+		accountsOrigin = make(map[common.Address][]byte)
 		storages       = make(map[common.Hash]map[common.Hash][]byte)
 		storagesOrigin = make(map[common.Address]map[common.Hash][]byte)
 	)
@@ -42,8 +47,13 @@ func newStateUpdate(originRoot common.Hash, root common.Hash, updates map[common
 		addr := op.address
 		// TODO:
 		// Add support for contract code updates in the future.
+
 		// Aggregate the account changes. The original account value will only
 		// be tracked if it's not present yet.
+		accounts[addrHash] = op.data
+		if _, found := accountsOrigin[addr]; !found {
+			accountsOrigin[addr] = op.origin
+		}
 
 		// Aggregate the storage changes. The original storage slot value will
 		// only be tracked if it's not present yet.
@@ -68,11 +78,29 @@ func newStateUpdate(originRoot common.Hash, root common.Hash, updates map[common
 		originRoot: types.TrieRootHash(originRoot),
 		root:       types.TrieRootHash(root),
 		// destructs:      destructs,
-		// accounts:       accounts,
-		// accountsOrigin: accountsOrigin,
+		accounts:       accounts,
+		accountsOrigin: accountsOrigin,
 		storages:       storages,
 		storagesOrigin: storagesOrigin,
 		// codes:          codes,
 		nodes: nodes,
+	}
+}
+
+// empty returns a flag indicating the state transition is empty or not.
+func (sc *stateUpdate) empty() bool {
+	return sc.originRoot == sc.root
+}
+
+// stateSet converts the current stateUpdate object into a triedb.StateSet
+// object. This function extracts the necessary data from the stateUpdate
+// struct and formats it into the StateSet structure consumed by the triedb
+// package.
+func (sc *stateUpdate) stateSet() *triedb.StateSet {
+	return &triedb.StateSet{
+		Accounts:       sc.accounts,
+		AccountsOrigin: sc.accountsOrigin,
+		Storages:       sc.storages,
+		StoragesOrigin: sc.storagesOrigin,
 	}
 }

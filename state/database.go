@@ -6,6 +6,7 @@ import (
 	"storage_extract/crypto"
 	"storage_extract/trie"
 	"storage_extract/trie/trienode"
+	"storage_extract/triedb"
 	"storage_extract/types"
 )
 
@@ -16,6 +17,9 @@ type Database interface {
 	// OpenStorageTrie opens the storage trie of an account.
 	// TODO: Currently, one parameter is missing: trie Trie (used to check Verkle trie, so not used for now)
 	OpenStorageTrie(stateRoot common.Hash, address common.Address, root common.Hash) (Trie, error)
+
+	// TrieDB returns the underlying trie database for managing trie nodes.
+	TrieDB() *triedb.Database
 }
 
 // Trie is a Ethereum Merkle Patricia trie.
@@ -55,7 +59,8 @@ type Trie interface {
 
 // CachingDB is an implementation of Database interface.
 type CachingDB struct {
-	// disk          ethdb.KeyValueStore TODO: provide an mock underlying keyvalue store db
+	//disk   ethdb.KeyValueStore
+	triedb *triedb.Database
 }
 
 func (db *CachingDB) OpenTrie(root common.Hash) (Trie, error) {
@@ -76,4 +81,9 @@ func (db *CachingDB) OpenStorageTrie(stateRoot common.Hash, address common.Addre
 		return nil, err
 	}
 	return tr, nil
+}
+
+// TrieDB retrieves any intermediate trie-node caching layer.
+func (db *CachingDB) TrieDB() *triedb.Database {
+	return db.triedb
 }

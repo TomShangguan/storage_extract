@@ -185,16 +185,29 @@ func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 
 	// Trie prefetching is not implemented in the current version.
 
-	// var (
-	// 	usedAddrs    []common.Address
-	// 	deletedAddrs []common.Address
-	//) (not needed for now)
+	start = time.Now()
+	var (
+		usedAddrs []common.Address
+	)
 
-	// TODO: Perform updates for Accounts' state
-	// for addr, op := range s.mutations {
-	// }
+	for addr, op := range s.mutations {
+		if op.applied {
+			continue
+		}
+		op.applied = true
+		s.updateStateObject(s.stateObjects[addr])
+		usedAddrs = append(usedAddrs, addr) // Copy needed for closure
+	}
 
-	return common.Hash{}
+	hash := s.trie.Hash()
+
+	return hash
+}
+
+// GetTrie returns the account trie.
+// Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 1096
+func (s *StateDB) GetTrie() Trie {
+	return s.trie
 }
 
 // commit gathers the state mutations accumulated along with the associated
@@ -242,8 +255,22 @@ func (s *StateDB) commit(deleteEmptyObjects bool) (*stateUpdate, error) {
 	// writes to run in parallel with the computations.
 	var (
 		start   = time.Now()
+		root    common.Hash
 		workers errgroup.Group
 	)
+
+	// Schedule the account trie first since that will be the biggest, so give
+	// it the most time to crunch.
+	workers.Go(func() error {
+		// Write the account trie changes, measuring the amount of wasted time
+		newroot, set := s.trie.Commit(true)
+		root = newroot
+
+		if err := merge(set); err != nil {
+			return err
+		}
+		return nil
+	})
 
 	// Schedule each of the storage tries that need to be updated, so they can
 	// run concurrently to one another.
@@ -274,8 +301,9 @@ func (s *StateDB) commit(deleteEmptyObjects bool) (*stateUpdate, error) {
 	}
 	// Clear all internal flags and update state root at the end.
 	s.mutations = make(map[common.Address]*mutation)
-	// TODO: Update Accounts Trie
-	return newStateUpdate(updates, nodes), nil
+	origin := s.originalRoot
+	s.originalRoot = root
+	return newStateUpdate(origin, root, updates, nodes), nil
 }
 
 // commitAndFlush is a wrapper of commit which also commits the state mutations
@@ -283,8 +311,17 @@ func (s *StateDB) commit(deleteEmptyObjects bool) (*stateUpdate, error) {
 // Original function: github.com/ethereum/go-ethereum/core/state/statedb.go line 1260
 func (s *StateDB) commitAndFlush(block uint64, deleteEmptyObjects bool) (*stateUpdate, error) {
 	ret, err := s.commit(deleteEmptyObjects)
-	// Commit objects to the trie, measuring the elapsed time
-
+	if err != nil {
+		return nil, err
+	}
+	// TODO: Commit dirty contract code if any exists
+	if !ret.empty() {
+		if db := s.db.TrieDB(); db != nil {
+			if err := db.Update(ret.root, ret.originRoot, block, ret.nodes, ret.stateSet()); err != nil {
+				return nil, err
+			}
+		}
+	}
 	return ret, err
 }
 
